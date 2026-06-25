@@ -1,0 +1,548 @@
+{% extends "base.html" %}
+{% block title %}Air Drawing{% endblock %}
+{% block feature_name %}draw{% endblock %}
+
+{% block head %}
+<style>
+  .dr-shell { height:100vh; display:grid; grid-template-columns:1fr 260px; }
+
+  /* ── Canvas area ─────────────────────── */
+  .dr-canvas-wrap {
+    position:relative; overflow:hidden; display:flex; flex-direction:column;
+    /* Layered grid: faint major gridlines (100px) + light micro-dots (20px) */
+    background-color:#f6f8fd;
+    background-image:
+      linear-gradient(rgba(0,88,190,0.032) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,88,190,0.032) 1px, transparent 1px),
+      radial-gradient(circle, rgba(90,120,210,0.16) 1px, transparent 1px);
+    background-size: 100px 100px, 100px 100px, 20px 20px;
+    background-position: 0 0, 0 0, 10px 10px;
+  }
+
+  /* Top HUD bar */
+  .dr-topbar {
+    height:52px; border-bottom:1px solid var(--border);
+    display:flex; align-items:center; gap:10px; padding:0 20px;
+    background:rgba(255,255,255,0.90); backdrop-filter:blur(10px);
+    flex-shrink:0; z-index:10; position:relative;
+  }
+  .dr-topbar-title { font-size:.88rem; font-weight:700; color:var(--text); flex:1; }
+
+  .dr-canvas-area { flex:1; position:relative; }
+  #draw-canvas { position:absolute; inset:0; width:100%; height:100%; cursor:none; }
+
+  /* ── Live brush cursor ──────────────── */
+  .brush-cursor {
+    position:absolute; border-radius:50%; pointer-events:none;
+    border:2px solid rgba(0,88,190,0.6); background:rgba(0,88,190,0.08);
+    transform:translate(-50%,-50%); z-index:3;
+    transition:opacity .15s, border-color .1s, background .1s;
+    opacity:0; box-shadow:0 0 8px rgba(0,88,190,0.15);
+  }
+  .brush-cursor.visible { opacity:1; }
+  .brush-cursor.lifted  { border-style:dashed; border-color:rgba(186,26,26,0.5); background:rgba(186,26,26,0.05); box-shadow:0 0 6px rgba(186,26,26,0.12); }
+  /* Crosshair center dot */
+  .brush-cursor::after {
+    content:''; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    width:3px; height:3px; border-radius:50%; background:rgba(0,88,190,0.5);
+  }
+
+  /* ── No-sensor welcome overlay ──────── */
+  .dr-welcome {
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    z-index:5; pointer-events:none; transition:opacity .4s;
+  }
+  .dr-welcome.hidden { opacity:0; }
+  .dr-welcome-card {
+    background:rgba(255,255,255,0.88); backdrop-filter:blur(12px);
+    border:1px solid rgba(0,88,190,0.15); border-radius:16px;
+    padding:28px 32px; max-width:340px; text-align:center;
+    box-shadow:0 4px 24px rgba(0,88,190,0.1);
+  }
+  .dr-welcome-card .ms { font-size:40px; color:var(--accent); display:block; margin-bottom:12px; }
+  .dr-welcome-card h3 { font-size:.95rem; font-weight:800; color:var(--text); margin-bottom:8px; }
+  .dr-welcome-card p  { font-size:.78rem; color:var(--text-2); line-height:1.65; }
+  .dr-welcome-map { display:flex; flex-direction:column; gap:6px; margin-top:14px; text-align:left; }
+  .dwm-row { display:flex; align-items:center; gap:9px; font-size:.75rem; }
+  .dwm-pill { padding:2px 9px; border-radius:20px; font-size:.65rem; font-weight:700; white-space:nowrap; }
+  .dwm-row .dwm-arrow { color:var(--text-3); font-size:.7rem; flex-shrink:0; }
+  .dwm-desc { color:var(--text-2); }
+
+  /* ── HUD overlays ───────────────────── */
+  .dr-hud {
+    position:absolute; bottom:14px; left:14px; right:14px;
+    display:flex; justify-content:space-between; align-items:flex-end;
+    pointer-events:none; gap:8px;
+  }
+  .dr-pos-pill {
+    padding:7px 12px; font-size:.7rem;
+    font-variant-numeric:tabular-nums; color:var(--text-2);
+    line-height:1.8;
+  }
+  .dr-pos-pill b { color:var(--text); }
+  .dr-lift-indicator { padding:7px 12px; font-size:.7rem; font-weight:600; color:var(--green); }
+  .dr-lift-indicator.lifted { color:var(--red); }
+
+  /* ── Sidebar ────────────────────────── */
+  .dr-sidebar {
+    border-left:1px solid var(--border); background:var(--surface);
+    display:flex; flex-direction:column; overflow:hidden;
+    box-shadow:-1px 0 0 var(--border);
+  }
+  .dr-sb-scroll { flex:1; overflow-y:auto; overflow-x:hidden; scrollbar-width:thin; }
+  .dr-sb-section { padding:14px 16px; border-bottom:1px solid var(--border); }
+  .dr-sb-section h3 {
+    font-size:.59rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase;
+    color:var(--text-3); margin-bottom:11px;
+  }
+
+  /* How to use */
+  .htu-rows { display:flex; flex-direction:column; gap:7px; }
+  .htu-row { display:flex; align-items:center; gap:9px; }
+  .htu-badge {
+    width:28px; height:28px; border-radius:7px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center; font-size:.72rem; font-weight:800;
+  }
+  .htu-text { font-size:.73rem; line-height:1.45; color:var(--text-2); }
+  .htu-text strong { color:var(--text); }
+  .htu-divider { margin:8px 0 6px; border:none; border-top:1px solid var(--border); }
+  .htu-note { font-size:.68rem; color:var(--text-3); line-height:1.55; padding:6px 8px; background:var(--surface-2); border-radius:7px; border-left:3px solid var(--accent); }
+
+  /* Axis bars */
+  .axis-row { margin-bottom:9px; }
+  .axis-row:last-child { margin-bottom:0; }
+  .axis-row-head { display:flex; justify-content:space-between; margin-bottom:4px; }
+  .axis-row-head .al { font-size:.69rem; font-weight:600; color:var(--text-3); }
+  .axis-row-head .av { font-size:.69rem; font-weight:700; font-variant-numeric:tabular-nums; }
+  .axis-track { height:5px; background:var(--surface-3); border-radius:3px; overflow:hidden; }
+  .axis-fill  { height:100%; border-radius:3px; transition:width .06s; }
+
+  /* Brush preview */
+  .brush-preview-wrap { display:flex; align-items:center; justify-content:center; margin-bottom:10px; }
+  .brush-preview { border-radius:50%; transition:all .15s; border:2px solid var(--border); }
+
+  /* Settings */
+  .dr-setting { margin-bottom:10px; }
+  .dr-setting:last-child { margin-bottom:0; }
+  .dr-setting label {
+    display:flex; justify-content:space-between; align-items:center;
+    font-size:.72rem; color:var(--text-2); margin-bottom:4px; font-weight:500;
+  }
+  .dr-setting label span { color:var(--text); font-weight:700; font-size:.72rem; }
+  .dr-setting input[type=range] { width:100%; accent-color:var(--accent); height:4px; }
+
+  /* Color mode */
+  .color-modes { display:flex; gap:4px; flex-wrap:wrap; }
+  .color-mode-btn {
+    padding:4px 9px; border-radius:20px; border:1.5px solid var(--border);
+    font-size:.67rem; font-weight:600; color:var(--text-3);
+    background:var(--surface-2); cursor:pointer; transition:all .12s;
+  }
+  .color-mode-btn:hover { border-color:var(--accent); color:var(--accent); }
+  .color-mode-btn.active { border-color:var(--accent); color:var(--accent); background:var(--accent-bg); }
+
+  /* Flip buttons */
+  .flip-btn {
+    padding:4px 11px; border-radius:20px; border:1.5px solid var(--border);
+    font-size:.67rem; font-weight:600; color:var(--text-3);
+    background:var(--surface-2); cursor:pointer; transition:all .12s;
+  }
+  .flip-btn:hover { border-color:var(--accent); color:var(--accent); }
+  .flip-btn.active { border-color:var(--accent); color:var(--accent); background:var(--accent-bg); }
+
+  /* Action buttons */
+  .dr-actions { display:flex; flex-direction:column; gap:7px; padding:14px 16px; border-top:1px solid var(--border); flex-shrink:0; }
+  .dr-actions .btn { justify-content:center; border-radius:8px; font-size:.77rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dr-shell">
+  <!-- ── Canvas ─────────────────────── -->
+  <div class="dr-canvas-wrap">
+    <div class="dr-topbar">
+      <span class="ms" style="color:var(--accent)">draw</span>
+      <div class="dr-topbar-title">Air Drawing</div>
+      <div class="badge" id="dr-status">Waiting for sensor</div>
+    </div>
+
+    <div class="dr-canvas-area">
+      <canvas id="draw-canvas"></canvas>
+
+      <!-- Live brush cursor -->
+      <div class="brush-cursor" id="brush-cursor"></div>
+
+      <!-- Welcome overlay (shown until first IMU data) -->
+      <div class="dr-welcome" id="dr-welcome">
+        <div class="dr-welcome-card">
+          <span class="ms fill">draw</span>
+          <h3>Air Drawing</h3>
+          <p>Move your phone to paint on this canvas. No touch needed — all motion controlled.</p>
+          <div class="dr-welcome-map">
+            <div class="dwm-row">
+              <span class="dwm-pill" style="background:rgba(0,88,190,0.10);color:#0058be">Yaw</span>
+              <span class="dwm-arrow">→</span>
+              <span class="dwm-desc">Rotate left/right <strong>→ X position</strong></span>
+            </div>
+            <div class="dwm-row">
+              <span class="dwm-pill" style="background:rgba(107,56,212,0.10);color:#6b38d4">Pitch</span>
+              <span class="dwm-arrow">→</span>
+              <span class="dwm-desc">Tilt forward/back <strong>→ Y position</strong></span>
+            </div>
+            <div class="dwm-row">
+              <span class="dwm-pill" style="background:rgba(130,81,0,0.10);color:#825100">Roll</span>
+              <span class="dwm-arrow">→</span>
+              <span class="dwm-desc">Tilt sideways <strong>→ Stroke colour</strong></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- HUD -->
+      <div class="dr-hud">
+        <div class="frosted-hud dr-pos-pill" id="dr-pos">
+          <div><b>Yaw</b> — &nbsp;<b>Pitch</b> —</div>
+          <div>X — &nbsp;Y —</div>
+        </div>
+        <div class="frosted-hud dr-lift-indicator" id="dr-lift">✏ Drawing</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Sidebar ────────────────────── -->
+  <div class="dr-sidebar">
+    <div class="dr-sb-scroll">
+
+      <!-- How to use -->
+      <div class="dr-sb-section">
+        <h3>How to Draw</h3>
+        <div class="htu-rows">
+          <div class="htu-row">
+            <div class="htu-badge" style="background:rgba(0,88,190,0.10)">
+              <span class="ms" style="color:#0058be;font-size:15px">rotate_right</span>
+            </div>
+            <div class="htu-text"><strong>Yaw</strong> — rotate phone horizontally → moves brush left/right</div>
+          </div>
+          <div class="htu-row">
+            <div class="htu-badge" style="background:rgba(107,56,212,0.10)">
+              <span class="ms" style="color:#6b38d4;font-size:15px">straighten</span>
+            </div>
+            <div class="htu-text"><strong>Pitch</strong> — tilt phone forward/back → moves brush up/down</div>
+          </div>
+          <div class="htu-row">
+            <div class="htu-badge" style="background:rgba(130,81,0,0.10)">
+              <span class="ms" style="color:#825100;font-size:15px">palette</span>
+            </div>
+            <div class="htu-text"><strong>Roll</strong> — tilt phone sideways → changes stroke colour</div>
+          </div>
+        </div>
+        <hr class="htu-divider">
+        <div class="htu-note">
+          <span class="ms" style="font-size:13px;vertical-align:-3px;color:var(--accent)">touch_app</span>
+          All controls are phone motion only — no screen touch needed.
+        </div>
+      </div>
+
+      <!-- Live axes -->
+      <div class="dr-sb-section">
+        <h3>Live Axes</h3>
+        <div class="axis-row">
+          <div class="axis-row-head">
+            <span class="al">Yaw → X</span>
+            <span class="av" id="ax-yaw" style="color:var(--c-yaw)">—</span>
+          </div>
+          <div class="axis-track"><div class="axis-fill" id="af-yaw" style="background:var(--c-yaw);width:50%"></div></div>
+        </div>
+        <div class="axis-row">
+          <div class="axis-row-head">
+            <span class="al">Pitch → Y</span>
+            <span class="av" id="ax-pitch" style="color:var(--c-pitch)">—</span>
+          </div>
+          <div class="axis-track"><div class="axis-fill" id="af-pitch" style="background:var(--c-pitch);width:50%"></div></div>
+        </div>
+        <div class="axis-row">
+          <div class="axis-row-head">
+            <span class="al">Roll → Color</span>
+            <span class="av" id="ax-roll" style="color:var(--c-roll)">—</span>
+          </div>
+          <div class="axis-track"><div class="axis-fill" id="af-roll" style="background:var(--c-roll);width:50%"></div></div>
+        </div>
+      </div>
+
+      <!-- Brush -->
+      <div class="dr-sb-section">
+        <h3>Brush</h3>
+        <div class="brush-preview-wrap">
+          <div class="brush-preview" id="brush-preview" style="width:20px;height:20px;background:#0058be"></div>
+        </div>
+        <div class="dr-setting">
+          <label>Size <span id="lbl-size">6px</span></label>
+          <input type="range" id="inp-size" min="2" max="40" value="6" step="1">
+        </div>
+        <div class="dr-setting">
+          <label>Opacity <span id="lbl-opacity">85%</span></label>
+          <input type="range" id="inp-opacity" min="10" max="100" value="85" step="5">
+        </div>
+        <div class="dr-setting">
+          <label>Smoothing <span id="lbl-smooth">60%</span></label>
+          <input type="range" id="inp-smooth" min="0" max="95" value="60" step="5">
+        </div>
+      </div>
+
+      <!-- Color mode -->
+      <div class="dr-sb-section">
+        <h3>Color Mode</h3>
+        <div class="color-modes">
+          <button class="color-mode-btn active" data-mode="roll">Roll hue</button>
+          <button class="color-mode-btn" data-mode="speed">Velocity</button>
+          <button class="color-mode-btn" data-mode="fixed">Fixed</button>
+          <button class="color-mode-btn" data-mode="time">Time</button>
+        </div>
+        <div style="margin-top:9px">
+          <input type="color" id="fixed-color" value="#0058be"
+            style="width:100%;height:28px;border:1.5px solid var(--border);border-radius:7px;background:var(--surface-2);cursor:pointer;padding:2px">
+        </div>
+      </div>
+
+      <!-- Axis flip -->
+      <div class="dr-sb-section">
+        <h3>Axis Flip</h3>
+        <div style="display:flex;gap:5px;flex-wrap:wrap">
+          <button class="flip-btn active" id="btn-flipx">Flip X ✓</button>
+          <button class="flip-btn active" id="btn-flipy">Flip Y ✓</button>
+        </div>
+        <div style="margin-top:8px;font-size:.67rem;color:var(--text-3);line-height:1.5">
+          Use if brush moves in the wrong direction relative to you.
+        </div>
+      </div>
+
+    </div><!-- /scroll -->
+
+    <!-- Sticky action buttons -->
+    <div class="dr-actions">
+      <button class="btn btn-ghost" id="btn-lift">
+        <span class="ms">edit_off</span> Lift Pen
+      </button>
+      <button class="btn btn-danger" id="btn-clear">
+        <span class="ms">delete_sweep</span> Clear Canvas
+      </button>
+      <button class="btn btn-primary" id="btn-export">
+        <span class="ms">save</span> Save Image
+      </button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const canvas = document.getElementById('draw-canvas');
+const ctx    = canvas.getContext('2d');
+const cursor = document.getElementById('brush-cursor');
+let W, H;
+
+function resize() {
+  const wrap = canvas.parentElement;
+  W = canvas.width  = wrap.clientWidth;
+  H = canvas.height = wrap.clientHeight;
+}
+resize(); window.addEventListener('resize', resize);
+
+// State
+let brushX = null, brushY = null;
+let targetX = null, targetY = null;
+let penLifted = false;
+let colorMode = 'roll';
+let fixedColor = '#0058be';
+let brushSize = 6;
+let opacity = 0.85;
+let smoothing = 0.6;
+let hue = 210;
+let timeHue = 0;
+let lastD = {yaw:0, pitch:0, roll:0};
+let sensorActive = false;
+
+// ── Settings ──────────────────────────────────────
+document.getElementById('inp-size').addEventListener('input', e => {
+  brushSize = +e.target.value;
+  document.getElementById('lbl-size').textContent = brushSize + 'px';
+  updateBrushPreview();
+});
+document.getElementById('inp-opacity').addEventListener('input', e => {
+  opacity = +e.target.value / 100;
+  document.getElementById('lbl-opacity').textContent = e.target.value + '%';
+});
+document.getElementById('inp-smooth').addEventListener('input', e => {
+  smoothing = +e.target.value / 100;
+  document.getElementById('lbl-smooth').textContent = e.target.value + '%';
+});
+
+document.querySelectorAll('.color-mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.color-mode-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    colorMode = btn.dataset.mode;
+    updateBrushPreview();
+  });
+});
+
+document.getElementById('fixed-color').addEventListener('input', e => {
+  fixedColor = e.target.value;
+  updateBrushPreview();
+});
+
+let invertX = true, invertY = true;
+document.getElementById('btn-flipx').addEventListener('click', function() {
+  invertX = !invertX;
+  this.textContent = invertX ? 'Flip X ✓' : 'Flip X';
+  this.classList.toggle('active', invertX);
+  brushX = brushY = null;
+});
+document.getElementById('btn-flipy').addEventListener('click', function() {
+  invertY = !invertY;
+  this.textContent = invertY ? 'Flip Y ✓' : 'Flip Y';
+  this.classList.toggle('active', invertY);
+  brushX = brushY = null;
+});
+
+function updateBrushPreview() {
+  const el = document.getElementById('brush-preview');
+  const s  = Math.max(brushSize * 2, 14);
+  el.style.width  = s + 'px';
+  el.style.height = s + 'px';
+  const c = colorMode === 'fixed' ? fixedColor : `hsl(${hue},70%,45%)`;
+  el.style.background   = c;
+  el.style.borderColor  = c + '80';
+  el.style.boxShadow    = `0 0 8px ${c}40`;
+}
+
+// ── Pen lift / clear / export ──────────────────────
+document.getElementById('btn-lift').addEventListener('click', () => {
+  penLifted = !penLifted; brushX = brushY = null;
+  const btn = document.getElementById('btn-lift');
+  const lbl = document.getElementById('dr-lift');
+  btn.innerHTML = penLifted
+    ? '<span class="ms">edit</span> Lower Pen'
+    : '<span class="ms">edit_off</span> Lift Pen';
+  lbl.textContent  = penLifted ? '⬆ Pen up' : '✏ Drawing';
+  lbl.className    = 'frosted-hud dr-lift-indicator' + (penLifted ? ' lifted' : '');
+  cursor.classList.toggle('lifted', penLifted);
+});
+
+document.getElementById('btn-clear').addEventListener('click', () => {
+  ctx.clearRect(0, 0, W, H);
+  brushX = brushY = null;
+});
+
+document.getElementById('btn-export').addEventListener('click', () => {
+  const tmp = document.createElement('canvas');
+  tmp.width = W; tmp.height = H;
+  const tc = tmp.getContext('2d');
+  tc.fillStyle = '#ffffff'; tc.fillRect(0, 0, W, H);
+  tc.drawImage(canvas, 0, 0);
+  const link = document.createElement('a');
+  link.download = 'imu-drawing-' + Date.now() + '.png';
+  link.href = tmp.toDataURL('image/png');
+  link.click();
+});
+
+// ── Color ──────────────────────────────────────────
+function getColor(roll, speed) {
+  timeHue = (timeHue + 0.4) % 360;
+  if (colorMode === 'roll')  hue = ((roll + 90) / 180) * 300;
+  if (colorMode === 'speed') hue = Math.min(speed * 12, 300);
+  if (colorMode === 'time')  hue = timeHue;
+  if (colorMode === 'fixed') return fixedColor;
+  return `hsla(${hue.toFixed(0)},72%,44%,${opacity})`;
+}
+
+function imuToCanvas(yaw, pitch) {
+  let x = (yaw / 360) * W;
+  let y = ((pitch + 90) / 180) * H;
+  if (invertX) x = W - x;
+  if (invertY) y = H - y;
+  return { x, y };
+}
+
+// ── IMU ───────────────────────────────────────────
+function onIMU(d) {
+  lastD = d;
+
+  if (!sensorActive) {
+    sensorActive = true;
+    document.getElementById('dr-welcome').classList.add('hidden');
+  }
+
+  const badge = document.getElementById('dr-status');
+  badge.textContent = 'Live'; badge.className = 'badge live';
+
+  document.getElementById('ax-yaw').textContent   = d.yaw.toFixed(1) + '°';
+  document.getElementById('ax-pitch').textContent = d.pitch.toFixed(1) + '°';
+  document.getElementById('ax-roll').textContent  = d.roll.toFixed(1) + '°';
+  document.getElementById('af-yaw').style.width   = (d.yaw / 360 * 100).toFixed(1) + '%';
+  document.getElementById('af-pitch').style.width = ((d.pitch + 90) / 180 * 100).toFixed(1) + '%';
+  document.getElementById('af-roll').style.width  = ((d.roll + 90) / 180 * 100).toFixed(1) + '%';
+
+  const mapped = imuToCanvas(d.yaw, d.pitch);
+  targetX = mapped.x; targetY = mapped.y;
+
+  document.getElementById('dr-pos').innerHTML =
+    `<div><b>Yaw</b> ${d.yaw.toFixed(1)}° &nbsp;<b>Pitch</b> ${d.pitch.toFixed(1)}°</div>` +
+    `<div>X ${Math.round(targetX)}px &nbsp;Y ${Math.round(targetY)}px</div>`;
+}
+
+// ── Draw loop ─────────────────────────────────────
+let prevX = null, prevY = null;
+
+function drawLoop() {
+  requestAnimationFrame(drawLoop);
+
+  if (targetX === null) return;
+
+  if (brushX === null) { brushX = targetX; brushY = targetY; }
+
+  const dx = targetX - brushX, dy = targetY - brushY;
+  brushX += dx * (1 - smoothing);
+  brushY += dy * (1 - smoothing);
+  const speed = Math.sqrt(dx*dx + dy*dy);
+
+  // ── Update brush cursor ────────────────
+  const csz = Math.max(brushSize * 2, 12);
+  cursor.style.left   = brushX + 'px';
+  cursor.style.top    = brushY + 'px';
+  cursor.style.width  = csz + 'px';
+  cursor.style.height = csz + 'px';
+  cursor.classList.add('visible');
+
+  // Update cursor color to match stroke
+  if (!penLifted) {
+    const c = colorMode === 'fixed' ? fixedColor : `hsl(${hue.toFixed(0)},70%,44%)`;
+    cursor.style.borderColor = c + 'aa';
+    cursor.style.background  = c + '15';
+    cursor.style.boxShadow   = `0 0 8px ${c}30`;
+  }
+
+  // ── Stroke ────────────────────────────
+  if (penLifted || speed < .4) { prevX = prevY = null; return; }
+
+  const color = getColor(lastD.roll, speed);
+  const size  = brushSize + Math.min(speed * .15, 6);
+
+  if (prevX !== null) {
+    ctx.beginPath();
+    ctx.moveTo(prevX, prevY);
+    ctx.lineTo(brushX, brushY);
+    ctx.strokeStyle = colorMode === 'fixed'
+      ? fixedColor + Math.round(opacity * 255).toString(16).padStart(2, '0')
+      : color;
+    ctx.lineWidth  = size;
+    ctx.lineCap    = 'round';
+    ctx.lineJoin   = 'round';
+    ctx.stroke();
+    updateBrushPreview();
+  }
+  prevX = brushX; prevY = brushY;
+}
+drawLoop();
+</script>
+{% endblock %}

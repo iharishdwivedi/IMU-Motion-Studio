@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+{% block title %}Home{% endblock %}
+{% block feature_name %}general{% endblock %}
+
+{% block head %}
+<style>
+  .home-wrap { max-width:1060px; margin:0 auto; padding:40px 32px 72px; }
+
+  /* Hero */
+  .hero { margin-bottom:52px; }
+  .hero-eyebrow {
+    display:inline-flex; align-items:center; gap:8px; margin-bottom:20px;
+    padding:5px 14px 5px 10px; border-radius:20px;
+    background:var(--accent-bg); border:1px solid rgba(0,88,190,0.2);
+    font-size:.72rem; font-weight:700; color:var(--accent); letter-spacing:.04em;
+  }
+  .hero-eyebrow .ms { font-size:14px; }
+  .hero h1 { font-size:clamp(2rem,4vw,3rem); font-weight:800; letter-spacing:-.03em; line-height:1.15; color:var(--text); margin-bottom:14px; }
+  .hero-sub { font-size:.95rem; color:var(--text-2); max-width:500px; line-height:1.7; margin-bottom:32px; }
+  .hero-actions { display:flex; gap:10px; flex-wrap:wrap; }
+
+  /* Live strip */
+  .live-section { margin-bottom:48px; }
+  .live-strip { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+  .live-tile {
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:var(--radius-lg); padding:20px 22px;
+    box-shadow:var(--shadow-sm);
+    transition:box-shadow .15s, transform .15s;
+  }
+  .live-tile:hover { box-shadow:var(--shadow-md); transform:translateY(-2px); }
+  .lt-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; }
+  .lt-icon { width:36px; height:36px; border-radius:9px; display:flex; align-items:center; justify-content:center; }
+  .lt-icon .ms { font-size:18px; }
+  .lt-label { font-size:.62rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--text-3); }
+  .lt-val { font-size:2.1rem; font-weight:700; font-variant-numeric:tabular-nums; margin-bottom:12px; }
+  .lt-bar { height:4px; border-radius:2px; background:var(--surface-3); overflow:hidden; }
+  .lt-fill { height:100%; border-radius:2px; transition:width .08s linear; }
+
+  .lt-yaw   .lt-icon { background:rgba(0,88,190,0.10); }   .lt-yaw   .lt-icon .ms { color:var(--c-yaw); }
+  .lt-yaw   .lt-val  { color:var(--c-yaw); }   .lt-yaw   .lt-fill { background:var(--c-yaw); }
+  .lt-pitch .lt-icon { background:rgba(107,56,212,0.10); } .lt-pitch .lt-icon .ms { color:var(--c-pitch); }
+  .lt-pitch .lt-val  { color:var(--c-pitch); } .lt-pitch .lt-fill { background:var(--c-pitch); }
+  .lt-roll  .lt-icon { background:rgba(130,81,0,0.10); }   .lt-roll  .lt-icon .ms { color:var(--c-roll); }
+  .lt-roll  .lt-val  { color:var(--c-roll); }  .lt-roll  .lt-fill { background:var(--c-roll); }
+
+  /* Feature grid */
+  .features-section { margin-bottom:48px; }
+  .feat-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:14px; }
+  .feat-card {
+    background:var(--surface); border:1.5px solid var(--border);
+    border-radius:var(--radius-lg); padding:22px 20px;
+    text-decoration:none; color:var(--text);
+    display:flex; flex-direction:column; gap:12px;
+    box-shadow:var(--shadow-sm);
+    transition:box-shadow .15s, transform .15s, border-color .15s;
+    position:relative; overflow:hidden;
+  }
+  .feat-card:hover { box-shadow:var(--shadow-md); transform:translateY(-3px); border-color:var(--c); }
+  .feat-icon {
+    width:42px; height:42px; border-radius:10px;
+    display:flex; align-items:center; justify-content:center;
+    background:rgba(0,0,0,0.05);
+  }
+  .feat-icon .ms { font-size:20px; }
+  .feat-name { font-weight:700; font-size:.9rem; color:var(--text); }
+  .feat-desc { font-size:.78rem; color:var(--text-2); line-height:1.6; flex:1; }
+  .feat-link {
+    display:flex; align-items:center; gap:5px;
+    font-size:.73rem; font-weight:700; color:var(--c);
+  }
+  .feat-link .ms { font-size:14px; }
+
+  /* Quick start */
+  .quick-wrap { display:grid; grid-template-columns:1fr auto; gap:32px; align-items:start; }
+  .steps-list { display:flex; flex-direction:column; }
+  .step { display:flex; gap:14px; padding:12px 0; border-bottom:1px solid var(--border); }
+  .step:last-child { border-bottom:none; }
+  .step-num {
+    width:26px; height:26px; border-radius:50%; flex-shrink:0; margin-top:1px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:.72rem; font-weight:800; color:#fff;
+  }
+  .step-num.s1 { background:var(--accent); }
+  .step-num.s2 { background:var(--purple); }
+  .step-num.s3 { background:var(--amber); }
+  .step-num.s4 { background:var(--green); }
+  .step-text { font-size:.82rem; color:var(--text-2); line-height:1.6; }
+  .step-text strong { color:var(--text); font-weight:700; }
+
+  .sender-box { min-width:220px; }
+  .ip-pill {
+    display:flex; align-items:center; gap:10px;
+    background:var(--accent-bg); border:1.5px solid rgba(0,88,190,0.2);
+    border-radius:10px; padding:12px 14px; margin-bottom:12px;
+  }
+  .ip-pill .ms { font-size:16px; color:var(--text-3); flex-shrink:0; }
+  .ip-pill code { font-size:.82rem; color:var(--accent); font-family:monospace; flex:1; word-break:break-all; font-weight:600; }
+
+  @media (max-width:700px) { .quick-wrap { grid-template-columns:1fr; } .live-strip { grid-template-columns:1fr; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="home-wrap">
+  <!-- Hero -->
+  <div class="hero">
+    <div class="hero-eyebrow">
+      <span class="ms fill">sensors</span>
+      Motion Studio
+    </div>
+    <h1>Motion data, live<br>in your browser.</h1>
+    <p class="hero-sub">Stream orientation from your phone over WiFi. Draw in the air, visualise in 3D, play drums — all in real time.</p>
+    <div class="hero-actions">
+      <a href="/connect" class="btn btn-primary">
+        <span class="ms">cast_connected</span>
+        Connect Phone
+      </a>
+      <a href="/sessions" class="btn btn-ghost">
+        <span class="ms">history</span>
+        View Sessions
+      </a>
+    </div>
+  </div>
+
+  <!-- Live data -->
+  <div class="live-section">
+    <div class="section-label">Live Orientation</div>
+    <div class="live-strip">
+      <div class="live-tile lt-yaw">
+        <div class="lt-header">
+          <div class="lt-icon"><span class="ms">explore</span></div>
+          <div class="lt-label">Yaw</div>
+        </div>
+        <div class="lt-val" id="lv-yaw">—</div>
+        <div class="lt-bar"><div class="lt-fill" id="lb-yaw" style="width:50%"></div></div>
+      </div>
+      <div class="live-tile lt-pitch">
+        <div class="lt-header">
+          <div class="lt-icon"><span class="ms">height</span></div>
+          <div class="lt-label">Pitch</div>
+        </div>
+        <div class="lt-val" id="lv-pitch">—</div>
+        <div class="lt-bar"><div class="lt-fill" id="lb-pitch" style="width:50%"></div></div>
+      </div>
+      <div class="live-tile lt-roll">
+        <div class="lt-header">
+          <div class="lt-icon"><span class="ms">rotate_right</span></div>
+          <div class="lt-label">Roll</div>
+        </div>
+        <div class="lt-val" id="lv-roll">—</div>
+        <div class="lt-bar"><div class="lt-fill" id="lb-roll" style="width:50%"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Features -->
+  <div class="features-section">
+    <div class="section-label">Features</div>
+    <div class="feat-grid">
+      <a href="/draw" class="feat-card" style="--c:var(--c-yaw)">
+        <div class="feat-icon" style="background:rgba(0,88,190,0.10)"><span class="ms" style="color:var(--c-yaw)">draw</span></div>
+        <div class="feat-name">Air Drawing</div>
+        <div class="feat-desc">Paint in the air — phone motion draws on a live canvas in real time.</div>
+        <div class="feat-link">Open <span class="ms">arrow_forward</span></div>
+      </a>
+      <a href="/cube" class="feat-card" style="--c:var(--c-pitch)">
+        <div class="feat-icon" style="background:rgba(107,56,212,0.10)"><span class="ms" style="color:var(--c-pitch)">view_in_ar</span></div>
+        <div class="feat-name">3D Cube</div>
+        <div class="feat-desc">A 3D cube that mirrors your phone's exact orientation.</div>
+        <div class="feat-link">Open <span class="ms">arrow_forward</span></div>
+      </a>
+      <a href="/phone3d" class="feat-card" style="--c:var(--c-roll)">
+        <div class="feat-icon" style="background:rgba(130,81,0,0.10)"><span class="ms" style="color:var(--c-roll)">phone_android</span></div>
+        <div class="feat-name">Phone 3D</div>
+        <div class="feat-desc">3D phone model that follows every rotation of your device.</div>
+        <div class="feat-link">Open <span class="ms">arrow_forward</span></div>
+      </a>
+      <a href="/drums" class="feat-card" style="--c:var(--red)">
+        <div class="feat-icon" style="background:rgba(186,26,26,0.10)"><span class="ms" style="color:var(--red)">graphic_eq</span></div>
+        <div class="feat-name">Drum Kit</div>
+        <div class="feat-desc">Play drums by moving your phone. Synthesised sounds, no files.</div>
+        <div class="feat-link">Open <span class="ms">arrow_forward</span></div>
+      </a>
+    </div>
+  </div>
+
+  <!-- Quick start -->
+  <div class="section-label">Quick Start</div>
+  <div class="card">
+    <div class="quick-wrap">
+      <div class="quick-steps">
+        <div class="step">
+          <div class="step-num s1">1</div>
+          <div class="step-text">Connect your phone and laptop to the <strong>same WiFi network</strong>.</div>
+        </div>
+        <div class="step">
+          <div class="step-num s2">2</div>
+          <div class="step-text">Open the <strong>sender link</strong> in Chrome on your Android phone.</div>
+        </div>
+        <div class="step">
+          <div class="step-num s3">3</div>
+          <div class="step-text">Go to <strong>chrome://flags</strong>, enable <em>Insecure origins treated as secure</em>, add the server URL, relaunch.</div>
+        </div>
+        <div class="step">
+          <div class="step-num s4">4</div>
+          <div class="step-text">Tap <strong>Start</strong> on the sender page — data streams live. Use <strong>New Session</strong> in the sidebar to record.</div>
+        </div>
+      </div>
+      <div class="sender-box">
+        <div class="card-title" style="margin-bottom:10px">Phone Sender URL</div>
+        <div class="ip-pill">
+          <span class="ms">phone_android</span>
+          <code>http://{{ ip }}:8000/sender</code>
+        </div>
+        <a href="/connect" class="btn btn-ghost" style="width:100%;justify-content:center">
+          <span class="ms">open_in_new</span>
+          Full Setup Guide
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function onIMU(d) {
+  const fmt = v => v.toFixed(1) + '°';
+  document.getElementById('lv-yaw').textContent   = fmt(d.yaw);
+  document.getElementById('lv-pitch').textContent = fmt(d.pitch);
+  document.getElementById('lv-roll').textContent  = fmt(d.roll);
+  document.getElementById('lb-yaw').style.width   = (d.yaw / 360 * 100).toFixed(1) + '%';
+  document.getElementById('lb-pitch').style.width = ((d.pitch + 90) / 180 * 100).toFixed(1) + '%';
+  document.getElementById('lb-roll').style.width  = ((d.roll  + 90) / 180 * 100).toFixed(1) + '%';
+}
+</script>
+{% endblock %}

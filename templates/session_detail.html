@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+{% block title %}Session #{{ data.session.id }}{% endblock %}
+{% block feature_name %}sessions{% endblock %}
+
+{% block head %}
+<style>
+  .sd-wrap { max-width:960px; margin:0 auto; padding:40px 24px 80px; }
+  .sd-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:32px; gap:16px; flex-wrap:wrap; }
+  .sd-header h1 { font-size:1.5rem; font-weight:800; letter-spacing:-.02em; margin-bottom:4px; }
+  .sd-meta { display:flex; gap:10px; flex-wrap:wrap; margin-top:8px; }
+  .sd-badge { padding:3px 10px; border-radius:20px; font-size:.68rem; font-weight:600; background:var(--surface-3); color:var(--text-2); border:1px solid var(--border); }
+  .sd-badge.feat-draw    { background:rgba(0,88,190,0.10);   color:var(--c-yaw);   border-color:rgba(0,88,190,0.2);   }
+  .sd-badge.feat-cube    { background:rgba(107,56,212,0.10); color:var(--c-pitch); border-color:rgba(107,56,212,0.2); }
+  .sd-badge.feat-phone3d { background:rgba(130,81,0,0.10);   color:var(--c-roll);  border-color:rgba(130,81,0,0.2);   }
+  .sd-badge.feat-drums   { background:rgba(186,26,26,0.10);  color:var(--red);     border-color:rgba(186,26,26,0.2);  }
+  .sd-actions { display:flex; gap:8px; }
+
+  /* Stats row */
+  .sd-stats { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px; margin-bottom:32px; }
+  .sd-stat { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:18px 20px; box-shadow:var(--shadow-sm); }
+  .sd-stat-l { font-size:.6rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--text-3); margin-bottom:7px; }
+  .sd-stat-v { font-size:1.45rem; font-weight:800; font-variant-numeric:tabular-nums; color:var(--text); }
+
+  /* Replay charts */
+  .sd-charts { display:flex; flex-direction:column; gap:1px; background:var(--border); border-radius:12px; overflow:hidden; margin-bottom:24px; box-shadow:var(--shadow-sm); }
+  .sd-chart-wrap { background:var(--surface); position:relative; padding-top:4px; height:145px; }
+  .sd-chart-lbl { position:absolute; top:10px; left:14px; font-size:.62rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; z-index:1; }
+
+  /* Replay controls */
+  .replay-bar { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:14px 20px; display:flex; align-items:center; gap:14px; margin-bottom:24px; box-shadow:var(--shadow-sm); flex-wrap:wrap; }
+  .replay-btn { background:var(--surface-2); border:1.5px solid var(--border); border-radius:8px; padding:7px 14px; font-size:.78rem; font-weight:600; color:var(--text-2); cursor:pointer; transition:all .15s; display:flex; align-items:center; gap:5px; }
+  .replay-btn .ms { font-size:15px; }
+  .replay-btn:hover { border-color:var(--accent); color:var(--accent); }
+  .replay-btn.active { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .replay-speed { font-size:.74rem; color:var(--text-3); display:flex; align-items:center; gap:6px; }
+  .replay-prog { flex:1; min-width:120px; accent-color:var(--accent); }
+  .replay-time { font-size:.74rem; font-variant-numeric:tabular-nums; color:var(--text-3); white-space:nowrap; }
+
+  /* Readings table */
+  .sd-tbl-wrap { overflow-x:auto; border:1px solid var(--border); border-radius:12px; box-shadow:var(--shadow-sm); }
+  .sd-tbl { width:100%; border-collapse:collapse; font-size:.8rem; }
+  .sd-tbl thead tr { border-bottom:1.5px solid var(--border); background:var(--surface-2); }
+  .sd-tbl th { font-size:.62rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--text-3); padding:11px 14px; text-align:left; }
+  .sd-tbl tbody tr { border-bottom:1px solid var(--border); transition:background .1s; }
+  .sd-tbl tbody tr:hover { background:var(--surface-2); }
+  .sd-tbl tbody tr:last-child { border:none; }
+  .sd-tbl td { padding:9px 14px; font-variant-numeric:tabular-nums; color:var(--text-2); }
+  .sd-tbl td:first-child { color:var(--text-3); font-weight:600; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="sd-wrap">
+  <div class="sd-header">
+    <div>
+      <h1>Session #{{ data.session.id }}</h1>
+      <div class="sd-meta">
+        <span class="sd-badge feat-{{ data.session.feature }}">{{ data.session.feature }}</span>
+        <span class="sd-badge">{{ data.session.started_at[:16].replace('T',' ') if data.session.started_at else '—' }}</span>
+        {% if data.session.ended_at %}<span class="sd-badge" style="color:var(--green);border-color:var(--green)">Completed</span>{% else %}<span class="sd-badge" style="color:var(--amber);border-color:var(--amber)">No end recorded</span>{% endif %}
+      </div>
+    </div>
+    <div class="sd-actions">
+      <a href="/sessions" class="btn btn-ghost"><span class="ms">arrow_back</span> All Sessions</a>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="sd-stats">
+    {% set dur = data.session.duration_s|int if data.session.duration_s else 0 %}
+    <div class="sd-stat">
+      <div class="sd-stat-l">Duration</div>
+      <div class="sd-stat-v">{% if dur >= 60 %}{{ dur // 60 }}m {{ dur % 60 }}s{% else %}{{ dur }}s{% endif %}</div>
+    </div>
+    <div class="sd-stat">
+      <div class="sd-stat-l">Readings</div>
+      <div class="sd-stat-v">{{ data.readings|length }}</div>
+    </div>
+    {% if data.readings %}
+    {% set yaws   = data.readings|map(attribute='yaw')  |list %}
+    {% set pitches= data.readings|map(attribute='pitch')|list %}
+    {% set rolls  = data.readings|map(attribute='roll') |list %}
+    <div class="sd-stat">
+      <div class="sd-stat-l">Yaw range</div>
+      <div class="sd-stat-v" style="color:var(--c-yaw)">{{ "%.0f"|format(yaws|min) }}–{{ "%.0f"|format(yaws|max) }}°</div>
+    </div>
+    <div class="sd-stat">
+      <div class="sd-stat-l">Pitch range</div>
+      <div class="sd-stat-v" style="color:var(--c-pitch)">{{ "%.0f"|format(pitches|min) }}–{{ "%.0f"|format(pitches|max) }}°</div>
+    </div>
+    <div class="sd-stat">
+      <div class="sd-stat-l">Roll range</div>
+      <div class="sd-stat-v" style="color:var(--c-roll)">{{ "%.0f"|format(rolls|min) }}–{{ "%.0f"|format(rolls|max) }}°</div>
+    </div>
+    {% endif %}
+  </div>
+
+  {% if data.readings %}
+  <!-- Replay controls -->
+  <div class="replay-bar">
+    <button class="replay-btn" id="btn-replay"><span class="ms">play_arrow</span> Replay</button>
+    <input type="range" class="replay-prog" id="replay-range" min="0" max="{{ data.readings|length - 1 }}" value="0" step="1">
+    <div class="replay-time"><span id="replay-cur">0</span> / {{ data.readings|length }}</div>
+    <div class="replay-speed">
+      Speed: <select id="replay-speed" style="background:var(--surface-2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:3px 6px;font-size:.72rem">
+        <option value="0.5">0.5×</option>
+        <option value="1" selected>1×</option>
+        <option value="2">2×</option>
+        <option value="4">4×</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="sd-charts">
+    <div class="sd-chart-wrap"><div class="sd-chart-lbl" style="color:var(--c-yaw)">YAW</div><canvas id="rc-yaw"></canvas></div>
+    <div class="sd-chart-wrap"><div class="sd-chart-lbl" style="color:var(--c-pitch)">PITCH</div><canvas id="rc-pitch"></canvas></div>
+    <div class="sd-chart-wrap"><div class="sd-chart-lbl" style="color:var(--c-roll)">ROLL</div><canvas id="rc-roll"></canvas></div>
+  </div>
+
+  <!-- Readings table (first 200) -->
+  <div class="card-title" style="margin-bottom:12px">Raw Readings {% if data.readings|length > 200 %}(first 200 of {{ data.readings|length }}){% endif %}</div>
+  <div class="sd-tbl-wrap">
+    <table class="sd-tbl">
+      <thead><tr><th>#</th><th>Yaw</th><th>Pitch</th><th>Roll</th><th>Time (ms)</th></tr></thead>
+      <tbody>
+        {% for r in data.readings[:200] %}
+        <tr>
+          <td>{{ loop.index }}</td>
+          <td style="color:var(--c-yaw)">{{ "%.2f"|format(r.yaw) }}°</td>
+          <td style="color:var(--c-pitch)">{{ "%.2f"|format(r.pitch) }}°</td>
+          <td style="color:var(--c-roll)">{{ "%.2f"|format(r.roll) }}°</td>
+          <td>{{ r.t | int if r.t else '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card" style="text-align:center;padding:48px;color:var(--text-3)">No readings recorded for this session.</div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if data.readings %}
+<script src="{{ url_for('static', filename='chart.min.js') }}"></script>
+<script>
+const READINGS = {{ data.readings | tojson }};
+const labels = READINGS.map((_,i) => i);
+
+function makeChart(id, key, color, ymin, ymax) {
+  return new Chart(document.getElementById(id), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        data: READINGS.map(r => r[key]),
+        borderColor: color, borderWidth: 2,
+        backgroundColor: color + '18', fill: true,
+        pointRadius: 0, tension: 0.3
+      }]
+    },
+    options: {
+      animation: false, responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { display: false },
+        y: {
+          min: ymin, max: ymax,
+          grid: { color: '#e2e7ff' },
+          ticks: { color: '#727785', font: { family: 'Plus Jakarta Sans', size: 10 }, maxTicksLimit: 4 },
+          border: { color: '#c2c6d6' }
+        }
+      }
+    }
+  });
+}
+
+const charts = {
+  yaw:   makeChart('rc-yaw',   'yaw',   '#0058be',  0,   360),
+  pitch: makeChart('rc-pitch', 'pitch', '#6b38d4', -90,   90),
+  roll:  makeChart('rc-roll',  'roll',  '#825100', -90,   90),
+};
+
+// Replay marker
+let replayActive = false, replayIdx = 0, replayTimer = null;
+const btnReplay  = document.getElementById('btn-replay');
+const replayRange= document.getElementById('replay-range');
+const replayCur  = document.getElementById('replay-cur');
+const replaySpd  = document.getElementById('replay-speed');
+
+function addAnnotation(idx) {
+  Object.values(charts).forEach(c => {
+    const key = c.canvas.id.replace('rc-','');
+    c.data.datasets[1] = { data: Array(READINGS.length).fill(null).map((_,i) => i===idx ? READINGS[idx][key] : null), borderColor:'#131b2e', pointRadius:5, pointBackgroundColor:'#131b2e', type:'scatter', order:0 };
+    c.update('none');
+  });
+}
+
+replayRange.addEventListener('input', () => {
+  replayIdx = +replayRange.value;
+  replayCur.textContent = replayIdx;
+  addAnnotation(replayIdx);
+});
+
+function setReplayBtn(active) {
+  if (active) {
+    btnReplay.innerHTML = '<span class="ms">stop</span> Stop';
+    btnReplay.classList.add('active');
+  } else {
+    btnReplay.innerHTML = '<span class="ms">play_arrow</span> Replay';
+    btnReplay.classList.remove('active');
+  }
+}
+
+btnReplay.addEventListener('click', () => {
+  if (replayActive) {
+    clearInterval(replayTimer); replayActive = false;
+    setReplayBtn(false);
+  } else {
+    if (replayIdx >= READINGS.length - 1) replayIdx = 0;
+    replayActive = true;
+    setReplayBtn(true);
+    const interval = Math.max(16, Math.round(50 / +replaySpd.value));
+    replayTimer = setInterval(() => {
+      replayIdx++;
+      replayRange.value = replayIdx;
+      replayCur.textContent = replayIdx;
+      addAnnotation(replayIdx);
+      if (replayIdx >= READINGS.length - 1) {
+        clearInterval(replayTimer); replayActive = false;
+        setReplayBtn(false);
+      }
+    }, interval);
+  }
+});
+</script>
+{% endif %}
+{% endblock %}

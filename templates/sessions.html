@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}Sessions{% endblock %}
+{% block feature_name %}sessions{% endblock %}
+
+{% block head %}
+<style>
+  .sess-wrap { max-width:900px; margin:0 auto; padding:40px 24px 80px; }
+  .sess-header { display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:28px; }
+  .sess-header h1 { font-size:1.6rem; font-weight:800; letter-spacing:-.03em; }
+  .sess-header p  { font-size:.82rem; color:var(--text-3); margin-top:3px; }
+  .sess-count-badge { display:inline-flex; align-items:center; padding:4px 12px; border-radius:20px; background:var(--accent-bg); color:var(--accent); font-size:.72rem; font-weight:700; border:1px solid rgba(0,88,190,0.2); }
+
+  .sess-empty { text-align:center; padding:80px 24px; }
+  .sess-empty .ms { font-size:48px; color:var(--border); display:block; margin-bottom:14px; }
+  .sess-empty h2 { font-size:1.1rem; font-weight:700; color:var(--text-2); margin-bottom:8px; }
+  .sess-empty p  { font-size:.83rem; line-height:1.6; color:var(--text-3); }
+
+  .sess-table { width:100%; border-collapse:collapse; }
+  .sess-table thead tr { border-bottom:1.5px solid var(--border); }
+  .sess-table th { font-size:.65rem; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:var(--text-3); padding:12px 16px 12px; text-align:left; }
+  .sess-table tbody tr { border-bottom:1px solid var(--border); transition:background .1s; }
+  .sess-table tbody tr:last-child { border:none; }
+  .sess-table tbody tr:hover { background:var(--surface-2); }
+  .sess-table td { padding:14px 16px; font-size:.82rem; color:var(--text-2); }
+  .sess-id { font-variant-numeric:tabular-nums; font-weight:700; color:var(--text-3); font-size:.8rem; }
+  .sess-feature { display:inline-flex; align-items:center; padding:3px 10px; border-radius:20px; font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; }
+  .sf-draw    { background:rgba(0,88,190,0.10);   color:var(--c-yaw);   }
+  .sf-cube    { background:rgba(107,56,212,0.10); color:var(--c-pitch); }
+  .sf-phone3d { background:rgba(130,81,0,0.10);   color:var(--c-roll);  }
+  .sf-drums   { background:rgba(186,26,26,0.10);  color:var(--red);     }
+  .sf-general { background:var(--surface-3);       color:var(--text-3);  }
+  .sess-dur { font-variant-numeric:tabular-nums; font-weight:600; }
+  .sess-cnt { font-variant-numeric:tabular-nums; }
+  .sess-link { color:var(--accent); font-weight:700; text-decoration:none; font-size:.78rem; display:inline-flex; align-items:center; gap:3px; }
+  .sess-link:hover { text-decoration:underline; }
+  .sess-date { font-size:.76rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="sess-wrap">
+  <div class="sess-header">
+    <div>
+      <h1>Sessions</h1>
+      <p>{{ sessions|length }} session{{ 's' if sessions|length != 1 else '' }} recorded</p>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center">
+      <span class="sess-count-badge">{{ sessions|length }} total</span>
+      <a href="/" class="btn btn-ghost"><span class="ms">arrow_back</span> Dashboard</a>
+    </div>
+  </div>
+
+  {% if not sessions %}
+  <div class="sess-empty">
+    <span class="ms">history</span>
+    <h2>No sessions yet</h2>
+    <p>Start a session from the sidebar using <strong>New Session</strong>,<br>then move your phone to record data.</p>
+  </div>
+  {% else %}
+  <div class="card" style="padding:0;overflow:hidden">
+    <table class="sess-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Feature</th>
+          <th>Started</th>
+          <th>Duration</th>
+          <th>Readings</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in sessions %}
+        <tr>
+          <td class="sess-id">#{{ s.id }}</td>
+          <td><span class="sess-feature sf-{{ s.feature }}">{{ s.feature }}</span></td>
+          <td class="sess-date">{{ s.started_at[:16].replace('T',' ') if s.started_at else '—' }}</td>
+          <td class="sess-dur">
+            {% if s.duration_s %}
+              {% set dur = s.duration_s|int %}
+              {% if dur >= 60 %}{{ (dur // 60) }}m {{ dur % 60 }}s{% else %}{{ dur }}s{% endif %}
+            {% else %}—{% endif %}
+          </td>
+          <td class="sess-cnt">{{ s.reading_count or 0 }}</td>
+          <td><a href="/sessions/{{ s.id }}" class="sess-link">View <span class="ms" style="font-size:13px">arrow_forward</span></a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

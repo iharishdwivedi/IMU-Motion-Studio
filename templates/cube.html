@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+{% block title %}3D Cube{% endblock %}
+{% block feature_name %}cube{% endblock %}
+
+{% block head %}
+<style>
+  .c-layout { height:100vh; display:grid; grid-template-columns:1fr 240px; }
+  .c-canvas-wrap { position:relative; overflow:hidden; background:#0d1117; }
+  #cube-canvas { display:block; width:100%; height:100%; }
+
+  .c-overlay {
+    position:absolute; top:14px; left:14px; right:14px;
+    display:flex; justify-content:space-between; align-items:flex-start; pointer-events:none;
+  }
+  .c-badge {
+    background:rgba(13,17,23,.85); border:1px solid rgba(255,255,255,0.12);
+    border-radius:20px; padding:6px 14px; font-size:.7rem; font-weight:600;
+    color:rgba(255,255,255,0.8); backdrop-filter:blur(10px);
+    display:flex; align-items:center; gap:7px;
+  }
+  .c-badge .dot { width:6px; height:6px; border-radius:50%; background:#22c55e; flex-shrink:0; animation:softpulse 2s infinite; }
+  @keyframes softpulse{0%,100%{opacity:1}50%{opacity:.25}}
+  .c-chips { display:flex; gap:6px; }
+  .c-chip {
+    background:rgba(13,17,23,.85); border:1px solid rgba(255,255,255,0.12);
+    border-radius:9px; padding:6px 11px; text-align:center; backdrop-filter:blur(10px);
+  }
+  .c-chip .cl { font-size:.56rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:rgba(255,255,255,0.45); }
+  .c-chip .cv { font-size:.88rem; font-weight:700; font-variant-numeric:tabular-nums; }
+
+  .c-calibrate {
+    position:absolute; bottom:14px; left:50%; transform:translateX(-50%);
+    background:rgba(13,17,23,.85); border:1px solid rgba(255,255,255,0.15);
+    border-radius:20px; padding:8px 18px; font:.62rem/1 var(--font);
+    font-weight:600; color:rgba(255,255,255,0.65); cursor:pointer; backdrop-filter:blur(10px);
+    transition:all .15s; letter-spacing:.04em; text-transform:uppercase;
+    display:flex; align-items:center; gap:6px;
+  }
+  .c-calibrate:hover { border-color:rgba(0,88,190,0.5); color:#adc6ff; }
+
+  .c-sidebar {
+    border-left:1px solid var(--border); background:var(--surface);
+    display:flex; flex-direction:column; overflow:hidden; box-shadow:-1px 0 0 var(--border);
+  }
+  .c-sb-section { padding:18px 20px; border-bottom:1px solid var(--border); }
+  .c-sb-section h3 {
+    font-size:.6rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase;
+    color:var(--text-3); margin-bottom:14px;
+  }
+  .val-row { margin-bottom:14px; }
+  .val-row:last-child { margin-bottom:0; }
+  .val-row-head { display:flex; justify-content:space-between; margin-bottom:6px; align-items:baseline; }
+  .val-row-head .vl { font-size:.72rem; font-weight:600; color:var(--text-3); }
+  .val-row-head .vv { font-size:1.15rem; font-weight:700; font-variant-numeric:tabular-nums; }
+  .val-track { height:5px; background:var(--surface-3); border-radius:3px; overflow:hidden; }
+  .val-fill  { height:100%; border-radius:3px; transition:width .08s; }
+
+  .dr-setting { margin-bottom:12px; }
+  .dr-setting:last-child { margin-bottom:0; }
+  .dr-setting label { display:flex; justify-content:space-between; font-size:.73rem; color:var(--text-2); margin-bottom:5px; }
+  .dr-setting label span { color:var(--text); font-weight:600; }
+  .dr-setting input[type=range] { width:100%; accent-color:var(--accent); }
+
+  .axis-legend { padding:18px 20px; }
+  .axis-legend h3 { font-size:.6rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--text-3); margin-bottom:12px; }
+  .leg-item { display:flex; align-items:center; gap:9px; margin-bottom:8px; font-size:.76rem; color:var(--text-2); }
+  .leg-dot { width:10px; height:10px; border-radius:3px; flex-shrink:0; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="c-layout">
+  <div class="c-canvas-wrap">
+    <canvas id="cube-canvas"></canvas>
+    <div class="c-overlay">
+      <div class="c-badge"><div class="dot"></div>3D Cube — Live</div>
+      <div class="c-chips">
+        <div class="c-chip"><div class="cl">Yaw</div><div class="cv" id="ov-yaw" style="color:var(--c-yaw)">—</div></div>
+        <div class="c-chip"><div class="cl">Pitch</div><div class="cv" id="ov-pitch" style="color:var(--c-pitch)">—</div></div>
+        <div class="c-chip"><div class="cl">Roll</div><div class="cv" id="ov-roll" style="color:var(--c-roll)">—</div></div>
+      </div>
+    </div>
+    <button class="c-calibrate" id="btn-calibrate"><span class="ms" style="font-size:14px;color:rgba(255,255,255,0.65)">my_location</span> Set as Zero</button>
+  </div>
+
+  <div class="c-sidebar">
+    <div class="c-sb-section">
+      <h3>Orientation</h3>
+      <div class="val-row">
+        <div class="val-row-head"><span class="vl">Yaw</span><span class="vv" id="sb-yaw" style="color:var(--c-yaw)">—</span></div>
+        <div class="val-track"><div class="val-fill" id="sf-yaw" style="background:var(--c-yaw);width:50%"></div></div>
+      </div>
+      <div class="val-row">
+        <div class="val-row-head"><span class="vl">Pitch</span><span class="vv" id="sb-pitch" style="color:var(--c-pitch)">—</span></div>
+        <div class="val-track"><div class="val-fill" id="sf-pitch" style="background:var(--c-pitch);width:50%"></div></div>
+      </div>
+      <div class="val-row">
+        <div class="val-row-head"><span class="vl">Roll</span><span class="vv" id="sb-roll" style="color:var(--c-roll)">—</span></div>
+        <div class="val-track"><div class="val-fill" id="sf-roll" style="background:var(--c-roll);width:50%"></div></div>
+      </div>
+    </div>
+
+    <div class="c-sb-section">
+      <h3>Settings</h3>
+      <div class="dr-setting">
+        <label>Sensitivity <span id="lbl-sens">1.0×</span></label>
+        <input type="range" id="inp-sens" min="0.2" max="3" value="1" step="0.1">
+      </div>
+      <div class="dr-setting">
+        <label>Smoothing <span id="lbl-lerp">10%</span></label>
+        <input type="range" id="inp-lerp" min="2" max="30" value="10" step="1">
+      </div>
+    </div>
+
+    <div class="axis-legend">
+      <h3>Axis Guide</h3>
+      <div class="leg-item"><div class="leg-dot" style="background:#EF4444"></div>Red axis — X (Pitch)</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#22C55E"></div>Green axis — Y (Yaw)</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#3D84F7"></div>Blue axis — Z (Roll)</div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='three.min.js') }}"></script>
+<script>
+const wrap = document.querySelector('.c-canvas-wrap');
+const canvas = document.getElementById('cube-canvas');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias:true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setClearColor(0x0D1117, 1);
+
+const scene  = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(42, 1, .1, 100);
+camera.position.set(3.2, 2.2, 3.2); camera.lookAt(0,0,0);
+
+scene.add(new THREE.AmbientLight(0xffffff, .5));
+const dl = new THREE.DirectionalLight(0xffffff, 1); dl.position.set(5,8,5); scene.add(dl);
+const fl = new THREE.DirectionalLight(0x3D84F7, .15); fl.position.set(-4,-3,2); scene.add(fl);
+
+const colors = [0x3D84F7,0x5B9BFF,0x8A63D2,0xA07BCE,0xD29922,0xE8B84B];
+const mats   = colors.map(c => new THREE.MeshPhongMaterial({ color:c, shininess:60 }));
+const cube   = new THREE.Mesh(new THREE.BoxGeometry(2,2,2), mats);
+scene.add(cube);
+
+// Axis lines
+const axDefs = [[new THREE.Vector3(2.2,0,0),0xEF4444],[new THREE.Vector3(0,2.2,0),0x22C55E],[new THREE.Vector3(0,0,2.2),0x3D84F7]];
+axDefs.forEach(([d,c]) => {
+  const g = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(),d]);
+  scene.add(new THREE.Line(g, new THREE.LineBasicMaterial({color:c,opacity:.5,transparent:true})));
+});
+
+// Grid
+const grid = new THREE.GridHelper(8, 8, 0x1C2128, 0x1C2128);
+grid.position.y = -1.5;
+scene.add(grid);
+
+let lerpFactor = 0.1, sensitivity = 1;
+let offsetYaw = 0, offsetPitch = 0, offsetRoll = 0;
+let rawYaw = 0, rawPitch = 0, rawRoll = 0;
+const targetQ = new THREE.Quaternion();
+const euler   = new THREE.Euler();
+const q1 = new THREE.Quaternion(-Math.sqrt(.5), 0, 0, Math.sqrt(.5)); // device→world transform
+
+document.getElementById('inp-sens').addEventListener('input', e => {
+  sensitivity = +e.target.value;
+  document.getElementById('lbl-sens').textContent = sensitivity.toFixed(1) + '×';
+});
+document.getElementById('inp-lerp').addEventListener('input', e => {
+  lerpFactor = +e.target.value / 100;
+  document.getElementById('lbl-lerp').textContent = e.target.value + '%';
+});
+document.getElementById('btn-calibrate').addEventListener('click', () => {
+  offsetYaw   = rawYaw;
+  offsetPitch = rawPitch;
+  offsetRoll  = rawRoll;
+});
+
+function onIMU(d) {
+  rawYaw = d.yaw; rawPitch = d.pitch; rawRoll = d.roll;
+  const yaw   = (rawYaw   - offsetYaw)   * sensitivity;
+  const pitch = (rawPitch - offsetPitch) * sensitivity;
+  const roll  = (rawRoll  - offsetRoll)  * sensitivity;
+
+  const fmt = v => (v>=0?'+':'')+v.toFixed(1)+'°';
+  ['yaw','pitch','roll'].forEach(k => {
+    document.getElementById('ov-'+k).textContent = fmt(d[k]);
+    document.getElementById('sb-'+k).textContent = fmt(d[k]);
+  });
+  document.getElementById('sf-yaw').style.width   = (d.yaw/360*100).toFixed(1)+'%';
+  document.getElementById('sf-pitch').style.width = ((d.pitch+90)/180*100).toFixed(1)+'%';
+  document.getElementById('sf-roll').style.width  = ((d.roll+90)/180*100).toFixed(1)+'%';
+
+  // Standard device-orientation → Three.js quaternion (YXZ order, q1 corrects for device Z-up vs Three.js Y-up)
+  euler.set(
+    THREE.MathUtils.degToRad(pitch),
+    THREE.MathUtils.degToRad(yaw),
+    THREE.MathUtils.degToRad(-roll),
+    'YXZ'
+  );
+  targetQ.setFromEuler(euler);
+  targetQ.multiply(q1);
+}
+
+function resize() {
+  const w=wrap.clientWidth, h=wrap.clientHeight;
+  renderer.setSize(w,h); camera.aspect=w/h; camera.updateProjectionMatrix();
+}
+resize(); window.addEventListener('resize', resize);
+
+(function animate() {
+  requestAnimationFrame(animate);
+  cube.quaternion.slerp(targetQ, lerpFactor);
+  renderer.render(scene, camera);
+})();
+</script>
+{% endblock %}

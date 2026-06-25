@@ -1,0 +1,237 @@
+{% extends "base.html" %}
+{% block title %}Phone 3D{% endblock %}
+{% block feature_name %}phone3d{% endblock %}
+
+{% block head %}
+<style>
+  .p-layout { height:100vh; display:grid; grid-template-columns:1fr 240px; }
+  .p-canvas-wrap { position:relative; overflow:hidden; background:#0d1117; }
+  #p3d-canvas { display:block; width:100%; height:100%; }
+
+  .p-overlay {
+    position:absolute; top:14px; left:14px; right:14px;
+    display:flex; justify-content:space-between; align-items:flex-start; pointer-events:none;
+  }
+  .p-badge {
+    background:rgba(13,17,23,.85); border:1px solid rgba(255,255,255,0.12);
+    border-radius:20px; padding:6px 14px; font-size:.7rem; font-weight:600;
+    color:rgba(255,255,255,0.8); backdrop-filter:blur(10px);
+    display:flex; align-items:center; gap:7px;
+  }
+  .p-badge .dot { width:6px; height:6px; border-radius:50%; background:#22c55e; }
+  .p-chips { display:flex; gap:6px; }
+  .p-chip {
+    background:rgba(13,17,23,.85); border:1px solid rgba(255,255,255,0.12);
+    border-radius:9px; padding:6px 11px; text-align:center; backdrop-filter:blur(10px);
+  }
+  .p-chip .pl { font-size:.56rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:rgba(255,255,255,0.45); }
+  .p-chip .pv { font-size:.88rem; font-weight:700; font-variant-numeric:tabular-nums; }
+
+  .p-calibrate {
+    position:absolute; bottom:14px; left:50%; transform:translateX(-50%);
+    background:rgba(13,17,23,.85); border:1px solid rgba(255,255,255,0.15);
+    border-radius:20px; padding:8px 18px; font:.62rem/1 var(--font);
+    font-weight:600; color:rgba(255,255,255,0.65); cursor:pointer; backdrop-filter:blur(10px);
+    transition:all .15s; letter-spacing:.04em; text-transform:uppercase;
+    display:flex; align-items:center; gap:6px;
+  }
+  .p-calibrate:hover { border-color:rgba(0,88,190,0.5); color:#adc6ff; }
+
+  .p-sidebar {
+    border-left:1px solid var(--border); background:var(--surface);
+    display:flex; flex-direction:column; overflow:hidden; box-shadow:-1px 0 0 var(--border);
+  }
+  .p-sb-section { padding:18px 20px; border-bottom:1px solid var(--border); }
+  .p-sb-section h3 {
+    font-size:.6rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase;
+    color:var(--text-3); margin-bottom:14px;
+  }
+  .val-row { margin-bottom:14px; }
+  .val-row:last-child { margin-bottom:0; }
+  .val-row-head { display:flex; justify-content:space-between; margin-bottom:6px; align-items:baseline; }
+  .val-row-head .vl { font-size:.72rem; font-weight:600; color:var(--text-3); }
+  .val-row-head .vv { font-size:1.15rem; font-weight:700; font-variant-numeric:tabular-nums; }
+  .val-track { height:5px; background:var(--surface-3); border-radius:3px; overflow:hidden; }
+  .val-fill  { height:100%; border-radius:3px; transition:width .08s; }
+  .dr-setting { margin-bottom:12px; }
+  .dr-setting:last-child { margin-bottom:0; }
+  .dr-setting label { display:flex; justify-content:space-between; font-size:.73rem; color:var(--text-2); margin-bottom:5px; }
+  .dr-setting label span { color:var(--text); font-weight:600; }
+  .dr-setting input[type=range] { width:100%; accent-color:var(--accent); }
+  .p-info { padding:18px 20px; font-size:.76rem; color:var(--text-2); line-height:1.7; flex:1; }
+  .p-info strong { color:var(--text); display:block; margin-bottom:6px; font-size:.78rem; font-weight:700; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="p-layout">
+  <div class="p-canvas-wrap">
+    <canvas id="p3d-canvas"></canvas>
+    <div class="p-overlay">
+      <div class="p-badge"><div class="dot"></div>Phone 3D — Live</div>
+      <div class="p-chips">
+        <div class="p-chip"><div class="pl">Yaw</div><div class="pv" id="pv-yaw" style="color:var(--c-yaw)">—</div></div>
+        <div class="p-chip"><div class="pl">Pitch</div><div class="pv" id="pv-pitch" style="color:var(--c-pitch)">—</div></div>
+        <div class="p-chip"><div class="pl">Roll</div><div class="pv" id="pv-roll" style="color:var(--c-roll)">—</div></div>
+      </div>
+    </div>
+    <button class="p-calibrate" id="btn-p-calibrate"><span class="ms" style="font-size:14px;color:rgba(255,255,255,0.65)">my_location</span> Set as Zero</button>
+  </div>
+
+  <div class="p-sidebar">
+    <div class="p-sb-section">
+      <h3>Orientation</h3>
+      <div class="val-row">
+        <div class="val-row-head"><span class="vl">Yaw</span><span class="vv" id="ps-yaw" style="color:var(--c-yaw)">—</span></div>
+        <div class="val-track"><div class="val-fill" id="pf-yaw" style="background:var(--c-yaw);width:50%"></div></div>
+      </div>
+      <div class="val-row">
+        <div class="val-row-head"><span class="vl">Pitch</span><span class="vv" id="ps-pitch" style="color:var(--c-pitch)">—</span></div>
+        <div class="val-track"><div class="val-fill" id="pf-pitch" style="background:var(--c-pitch);width:50%"></div></div>
+      </div>
+      <div class="val-row">
+        <div class="val-row-head"><span class="vl">Roll</span><span class="vv" id="ps-roll" style="color:var(--c-roll)">—</span></div>
+        <div class="val-track"><div class="val-fill" id="pf-roll" style="background:var(--c-roll);width:50%"></div></div>
+      </div>
+    </div>
+    <div class="p-sb-section">
+      <h3>Settings</h3>
+      <div class="dr-setting">
+        <label>Sensitivity <span id="lbl-psens">1.0×</span></label>
+        <input type="range" id="inp-psens" min="0.2" max="3" value="1" step="0.1">
+      </div>
+      <div class="dr-setting">
+        <label>Smoothing <span id="lbl-plerp">10%</span></label>
+        <input type="range" id="inp-plerp" min="2" max="30" value="10" step="1">
+      </div>
+    </div>
+    <div class="p-info">
+      <strong>How to use</strong>
+      Hold your phone and watch the 3D model mirror it exactly. Press <em>Set as Zero</em> to use your current position as the neutral orientation.
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='three.min.js') }}"></script>
+<script>
+const wrap = document.querySelector('.p-canvas-wrap');
+const canvas = document.getElementById('p3d-canvas');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias:true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setClearColor(0x0D1117, 1);
+renderer.shadowMap.enabled = true;
+
+const scene  = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(38, 1, .1, 100);
+camera.position.set(0, 0.5, 6);
+
+// Lighting
+scene.add(new THREE.AmbientLight(0xffffff, .45));
+const key = new THREE.DirectionalLight(0xffffff, 1.1); key.position.set(4,6,4); key.castShadow=true; scene.add(key);
+const rim = new THREE.DirectionalLight(0x3D84F7, .2); rim.position.set(-3,-2,-4); scene.add(rim);
+
+// Ground plane (subtle)
+const gnd = new THREE.Mesh(new THREE.PlaneGeometry(12,12), new THREE.MeshStandardMaterial({color:0x161B22,roughness:1}));
+gnd.rotation.x=-Math.PI/2; gnd.position.y=-2.5; gnd.receiveShadow=true; scene.add(gnd);
+
+const grp = new THREE.Group(); scene.add(grp);
+
+// Body
+const bodyMat = new THREE.MeshStandardMaterial({color:0x1C2128,metalness:.6,roughness:.3});
+const body = new THREE.Mesh(new THREE.BoxGeometry(1.1,2.25,.13), bodyMat);
+body.castShadow=true; grp.add(body);
+
+// Rounded corner feel — chamfer edges
+const edgeMat = new THREE.MeshStandardMaterial({color:0x21262D,metalness:.7,roughness:.25});
+[-1,1].forEach(sx => [-1,1].forEach(sy => {
+  const e = new THREE.Mesh(new THREE.CylinderGeometry(.06,.06,.13,12), edgeMat);
+  e.rotation.x=Math.PI/2; e.position.set(sx*.52,sy*1.085,0); grp.add(e);
+}));
+
+// Screen
+const screenMat = new THREE.MeshStandardMaterial({color:0x0D1117,emissive:0x3D84F7,emissiveIntensity:.06,roughness:.05,metalness:.1});
+const screen = new THREE.Mesh(new THREE.BoxGeometry(.96,2.0,.012), screenMat);
+screen.position.z=.065; grp.add(screen);
+
+// Screen glow plane
+const glowMat = new THREE.MeshBasicMaterial({color:0x3D84F7,transparent:true,opacity:.03});
+const glow = new THREE.Mesh(new THREE.PlaneGeometry(.88,1.9), glowMat);
+glow.position.z=.072; grp.add(glow);
+
+// Camera island
+const camIsland = new THREE.Mesh(new THREE.BoxGeometry(.28,.28,.025), new THREE.MeshStandardMaterial({color:0x161B22,metalness:.8,roughness:.2}));
+camIsland.position.set(-.2,.9,-.082); grp.add(camIsland);
+const camLens = new THREE.Mesh(new THREE.CylinderGeometry(.055,.055,.015,16), new THREE.MeshStandardMaterial({color:0x0A0E14,metalness:1,roughness:0}));
+camLens.rotation.x=Math.PI/2; camLens.position.set(-.2,.9,-.097); grp.add(camLens);
+
+// Power button
+const btn = new THREE.Mesh(new THREE.BoxGeometry(.025,.22,.038), new THREE.MeshStandardMaterial({color:0x30363D,metalness:.5}));
+btn.position.set(.575,.16,0); grp.add(btn);
+
+// Volume buttons
+[-0.12, 0.12].forEach(y => {
+  const vb = new THREE.Mesh(new THREE.BoxGeometry(.025,.15,.035), new THREE.MeshStandardMaterial({color:0x30363D,metalness:.5}));
+  vb.position.set(-.575,y,0); grp.add(vb);
+});
+
+let lerpFactor = 0.1, sensitivity = 1;
+let offsetYaw = 0, offsetPitch = 0, offsetRoll = 0;
+let rawYaw = 0, rawPitch = 0, rawRoll = 0;
+const targetQ = new THREE.Quaternion();
+const euler   = new THREE.Euler();
+const q1 = new THREE.Quaternion(-Math.sqrt(.5), 0, 0, Math.sqrt(.5));
+
+document.getElementById('inp-psens').addEventListener('input', e => {
+  sensitivity = +e.target.value;
+  document.getElementById('lbl-psens').textContent = sensitivity.toFixed(1) + '×';
+});
+document.getElementById('inp-plerp').addEventListener('input', e => {
+  lerpFactor = +e.target.value / 100;
+  document.getElementById('lbl-plerp').textContent = e.target.value + '%';
+});
+document.getElementById('btn-p-calibrate').addEventListener('click', () => {
+  offsetYaw=rawYaw; offsetPitch=rawPitch; offsetRoll=rawRoll;
+});
+
+function onIMU(d) {
+  rawYaw=d.yaw; rawPitch=d.pitch; rawRoll=d.roll;
+  const yaw   = (rawYaw   - offsetYaw)   * sensitivity;
+  const pitch = (rawPitch - offsetPitch) * sensitivity;
+  const roll  = (rawRoll  - offsetRoll)  * sensitivity;
+
+  const fmt = v => (v>=0?'+':'')+v.toFixed(1)+'°';
+  ['yaw','pitch','roll'].forEach(k => {
+    document.getElementById('pv-'+k).textContent = fmt(d[k]);
+    document.getElementById('ps-'+k).textContent = fmt(d[k]);
+  });
+  document.getElementById('pf-yaw').style.width   = (d.yaw/360*100).toFixed(1)+'%';
+  document.getElementById('pf-pitch').style.width = ((d.pitch+90)/180*100).toFixed(1)+'%';
+  document.getElementById('pf-roll').style.width  = ((d.roll+90)/180*100).toFixed(1)+'%';
+
+  euler.set(
+    THREE.MathUtils.degToRad(pitch),
+    THREE.MathUtils.degToRad(yaw),
+    THREE.MathUtils.degToRad(-roll),
+    'YXZ'
+  );
+  targetQ.setFromEuler(euler);
+  targetQ.multiply(q1);
+
+  screenMat.emissiveIntensity = .045 + Math.min((Math.abs(pitch)+Math.abs(roll))/400, .12);
+}
+
+function resize() {
+  const w=wrap.clientWidth, h=wrap.clientHeight;
+  renderer.setSize(w,h); camera.aspect=w/h; camera.updateProjectionMatrix();
+}
+resize(); window.addEventListener('resize', resize);
+
+(function animate() {
+  requestAnimationFrame(animate);
+  grp.quaternion.slerp(targetQ, lerpFactor);
+  renderer.render(scene,camera);
+})();
+</script>
+{% endblock %}

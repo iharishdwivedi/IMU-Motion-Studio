@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+{% block title %}How to Connect{% endblock %}
+{% block feature_name %}connect{% endblock %}
+
+{% block head %}
+<style>
+  .cn-wrap { max-width:800px; margin:0 auto; padding:48px 24px 80px; }
+  .cn-hero { margin-bottom:48px; }
+  .cn-hero h1 { font-size:2rem; font-weight:800; letter-spacing:-.03em; margin-bottom:8px; }
+  .cn-hero p  { color:var(--text-2); font-size:.9rem; line-height:1.65; }
+
+  /* URL box */
+  .url-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:24px; margin-bottom:36px; }
+  .url-card-title { font-size:.68rem; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:var(--text-3); margin-bottom:14px; }
+  .url-box { display:flex; align-items:center; gap:10px; background:var(--accent-bg); border:1.5px solid rgba(0,88,190,0.2); border-radius:10px; padding:12px 16px; }
+  .url-box code { flex:1; font-family:monospace; font-size:.88rem; color:var(--accent); word-break:break-all; font-weight:600; }
+  .copy-btn { flex-shrink:0; background:var(--surface-2); border:1px solid var(--border); border-radius:7px; padding:7px 12px; font-size:.72rem; font-weight:600; color:var(--text-2); cursor:pointer; transition:all .15s; white-space:nowrap; }
+  .copy-btn:hover { border-color:var(--border-2); color:var(--text); }
+  .copy-btn.copied { border-color:var(--green); color:var(--green); }
+  .url-note { margin-top:10px; font-size:.75rem; color:var(--text-3); line-height:1.55; }
+
+  /* Steps */
+  .steps-title { font-size:.68rem; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:var(--text-3); margin-bottom:16px; }
+  .steps-grid { display:flex; flex-direction:column; gap:2px; }
+  .step-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px 24px; display:flex; gap:18px; align-items:flex-start; }
+  .step-num { width:32px; height:32px; border-radius:50%; font-size:.82rem; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; color:#fff; }
+  .step-body h3 { font-size:.9rem; font-weight:700; margin-bottom:4px; }
+  .step-body p  { font-size:.8rem; color:var(--text-2); line-height:1.6; }
+  .step-body .flag-box { margin-top:10px; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:10px 14px; font-family:monospace; font-size:.8rem; color:var(--amber); font-weight:600; }
+  .step-body .note { margin-top:8px; font-size:.72rem; color:var(--text-2); background:var(--surface-3); border-radius:6px; padding:7px 11px; line-height:1.5; }
+
+  .divider { height:1px; background:var(--border); margin:36px 0; }
+
+  /* Render sync card */
+  .render-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:24px; margin-bottom:36px; }
+  .render-card-head { display:flex; align-items:center; gap:10px; margin-bottom:16px; }
+  .render-card-icon { width:36px; height:36px; border-radius:9px; background:linear-gradient(135deg,rgba(0,88,190,0.12),rgba(107,56,212,0.12)); display:flex; align-items:center; justify-content:center; }
+  .render-card-title { font-size:.88rem; font-weight:800; color:var(--text); }
+  .render-card-sub   { font-size:.74rem; color:var(--text-3); margin-top:2px; }
+  .render-input-row  { display:flex; gap:8px; align-items:center; }
+  .render-input {
+    flex:1; height:40px; padding:0 14px; border:1.5px solid var(--border);
+    border-radius:8px; font-size:.82rem; font-family:monospace; color:var(--text);
+    background:var(--surface-2); outline:none; transition:border-color .15s;
+  }
+  .render-input:focus { border-color:var(--accent); background:var(--surface); }
+  .render-input::placeholder { color:var(--text-3); font-family:var(--font); }
+  .render-status { margin-top:10px; font-size:.74rem; display:flex; align-items:center; gap:6px; min-height:20px; color:var(--text-3); }
+  .render-status.ok  { color:var(--green); }
+  .render-status.err { color:var(--red); }
+  .render-note { margin-top:12px; font-size:.73rem; color:var(--text-3); line-height:1.6; padding:10px 12px; background:var(--surface-2); border-radius:8px; }
+
+  /* Troubleshoot */
+  .trouble-title { font-size:.68rem; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:var(--text-3); margin-bottom:14px; }
+  .trouble-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .trouble-card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:16px; }
+  .trouble-card h4 { font-size:.8rem; font-weight:700; margin-bottom:5px; color:var(--amber); }
+  .trouble-card p  { font-size:.75rem; color:var(--text-2); line-height:1.55; }
+  @media(max-width:560px) { .trouble-grid { grid-template-columns:1fr; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="cn-wrap">
+  <div class="cn-hero">
+    <h1>How to Connect</h1>
+    <p>Connect your Android phone to this dashboard in under 2 minutes. Both devices must be on the same WiFi network.</p>
+  </div>
+
+  <!-- Sender URL -->
+  <div class="url-card">
+    <div class="url-card-title">Phone Sender URL</div>
+    <div class="url-box">
+      <code id="sender-url">http://{{ ip }}:8000/sender</code>
+      <button class="copy-btn" id="copy-btn">Copy</button>
+    </div>
+    <div class="url-note">
+      Open this URL in <strong>Chrome on your Android phone</strong>. Your laptop IP was auto-detected. If you're on a different subnet, replace with your laptop's IP address.
+    </div>
+  </div>
+
+  <!-- Render Sync -->
+  <div class="render-card">
+    <div class="render-card-head">
+      <div class="render-card-icon">
+        <span class="ms" style="color:var(--accent);font-size:19px">cloud_sync</span>
+      </div>
+      <div>
+        <div class="render-card-title">Render Cloud Sync</div>
+        <div class="render-card-sub">Session data auto-pushes to your Render deployment when a session ends</div>
+      </div>
+    </div>
+    <div class="render-input-row">
+      <input class="render-input" id="render-url-inp" type="url"
+        placeholder="https://your-app.onrender.com">
+      <button class="btn btn-ghost" id="render-save-btn" style="white-space:nowrap">
+        <span class="ms" style="font-size:15px">save</span> Save
+      </button>
+      <button class="btn btn-ghost" id="render-test-btn" style="white-space:nowrap">
+        <span class="ms" style="font-size:15px">wifi_tethering</span> Test
+      </button>
+    </div>
+    <div class="render-status" id="render-status"></div>
+    <div class="render-note">
+      <strong>How it works:</strong> When a local session ends, Motion Studio automatically POSTs all readings to your Render app's API. You can then open your Render URL from any device to view full session history and replays.
+    </div>
+  </div>
+
+  <!-- Steps -->
+  <div class="steps-title">Step-by-step setup</div>
+  <div class="steps-grid">
+    <div class="step-card">
+      <div class="step-num" style="background:var(--accent)">1</div>
+      <div class="step-body">
+        <h3>Same WiFi</h3>
+        <p>Make sure your phone and this laptop are connected to the <strong>same WiFi network</strong>. Hotspot will also work if your phone is the hotspot and the laptop connects to it.</p>
+      </div>
+    </div>
+    <div class="step-card">
+      <div class="step-num" style="background:var(--purple)">2</div>
+      <div class="step-body">
+        <h3>Open the sender page</h3>
+        <p>On your Android phone, open Chrome and navigate to:</p>
+        <div class="flag-box">http://{{ ip }}:8000/sender</div>
+        <div class="note">Alternatively scan a QR code or type the URL manually.</div>
+      </div>
+    </div>
+    <div class="step-card">
+      <div class="step-num" style="background:var(--amber)">3</div>
+      <div class="step-body">
+        <h3>Enable DeviceOrientation in Chrome</h3>
+        <p>Chrome blocks sensor access on plain HTTP. You must whitelist the server URL once:</p>
+        <div class="flag-box">chrome://flags/#unsafely-treat-insecure-origin-as-secure</div>
+        <p style="margin-top:8px;font-size:.78rem;color:var(--text-2)">Paste the flag URL into Chrome's address bar on your phone. In the text field that appears, enter:</p>
+        <div class="flag-box" style="color:var(--blue)">http://{{ ip }}:8000</div>
+        <div class="note">Change the dropdown to <strong>Enabled</strong>, then tap <strong>Relaunch</strong>. You only need to do this once per device.</div>
+      </div>
+    </div>
+    <div class="step-card">
+      <div class="step-num" style="background:var(--green)">4</div>
+      <div class="step-body">
+        <h3>Start streaming</h3>
+        <p>Return to the sender page, tap <strong>Start</strong>. The button turns into a stop button and you'll see orientation values updating. The dashboard status badge will show <em>Connected</em>.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Troubleshoot -->
+  <div class="trouble-title">Troubleshooting</div>
+  <div class="trouble-grid">
+    <div class="trouble-card">
+      <h4>Stuck at CONNECTING</h4>
+      <p>The phone can't reach the server. Check: same WiFi, correct IP, Windows Firewall allows port 8000, server is running.</p>
+    </div>
+    <div class="trouble-card">
+      <h4>Connected but values are 0</h4>
+      <p>The Chrome flag wasn't set. Complete Step 3 exactly — the flag must be Enabled and Chrome relaunched before going to the sender page.</p>
+    </div>
+    <div class="trouble-card">
+      <h4>Wrong IP address shown</h4>
+      <p>The server may have detected a VPN or secondary adapter IP. Find your real WiFi IP via <code>ipconfig</code> in PowerShell and use that instead.</p>
+    </div>
+    <div class="trouble-card">
+      <h4>Data streams but lags</h4>
+      <p>WiFi congestion or a weak signal. Move closer to the router, or reduce send rate on the sender page (interval setting).</p>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── Copy sender URL ───────────────────────────────────
+document.getElementById('copy-btn').addEventListener('click', function() {
+  const url = document.getElementById('sender-url').textContent;
+  navigator.clipboard.writeText(url).then(() => {
+    this.textContent = 'Copied!';
+    this.classList.add('copied');
+    setTimeout(() => { this.textContent = 'Copy'; this.classList.remove('copied'); }, 2000);
+  }).catch(() => {
+    this.textContent = 'Copy failed';
+    setTimeout(() => { this.textContent = 'Copy'; }, 1500);
+  });
+});
+
+// ── Render URL setting ───────────────────────────────
+const renderInp    = document.getElementById('render-url-inp');
+const renderStatus = document.getElementById('render-status');
+
+// Load saved URL
+const saved = localStorage.getItem('imu_render_url');
+if (saved) renderInp.value = saved;
+
+document.getElementById('render-save-btn').addEventListener('click', () => {
+  const url = renderInp.value.trim().replace(/\/$/, '');
+  if (!url) {
+    localStorage.removeItem('imu_render_url');
+    renderStatus.className = 'render-status';
+    renderStatus.innerHTML = '<span class="ms" style="font-size:14px">info</span> Render sync cleared.';
+    return;
+  }
+  localStorage.setItem('imu_render_url', url);
+  renderStatus.className = 'render-status ok';
+  renderStatus.innerHTML = '<span class="ms fill" style="font-size:14px">check_circle</span> Saved. Sessions will sync to <strong>' + url + '</strong>';
+});
+
+document.getElementById('render-test-btn').addEventListener('click', async () => {
+  const url = (renderInp.value.trim() || localStorage.getItem('imu_render_url') || '').replace(/\/$/, '');
+  if (!url) {
+    renderStatus.className = 'render-status err';
+    renderStatus.innerHTML = '<span class="ms" style="font-size:14px">error</span> Enter a Render URL first.';
+    return;
+  }
+  renderStatus.className = 'render-status';
+  renderStatus.innerHTML = '<span class="ms" style="font-size:14px;animation:spin-icon .8s linear infinite;display:inline-block">sync</span> Testing&hellip;';
+  try {
+    const r = await fetch(url + '/api/sessions', { signal: AbortSignal.timeout(8000) });
+    if (r.ok) {
+      const data = await r.json();
+      renderStatus.className = 'render-status ok';
+      renderStatus.innerHTML = '<span class="ms fill" style="font-size:14px">check_circle</span> Connected — ' + data.length + ' session(s) on Render.';
+    } else {
+      throw new Error('HTTP ' + r.status);
+    }
+  } catch(e) {
+    renderStatus.className = 'render-status err';
+    renderStatus.innerHTML = '<span class="ms" style="font-size:14px">cloud_off</span> Could not reach Render. Check URL or wait for it to wake up.';
+  }
+});
+</script>
+{% endblock %}

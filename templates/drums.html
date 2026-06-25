@@ -1,0 +1,405 @@
+{% extends "base.html" %}
+{% block title %}Drum Kit{% endblock %}
+{% block feature_name %}drums{% endblock %}
+
+{% block head %}
+<style>
+  .d-layout { height:100vh; display:grid; grid-template-columns:1fr 260px; }
+
+  /* Main area */
+  .d-main { display:flex; flex-direction:column; overflow:hidden; background:var(--bg); }
+
+  /* Top bar */
+  .d-topbar {
+    height:52px; border-bottom:1px solid var(--border);
+    display:flex; align-items:center; gap:12px; padding:0 24px;
+    background:var(--surface); flex-shrink:0;
+    box-shadow:0 1px 0 var(--border);
+  }
+  .d-topbar-title { font-size:.88rem; font-weight:700; color:var(--text); flex:1; }
+
+  /* Scrollable body */
+  .d-body { flex:1; overflow-y:auto; padding:28px 24px; display:flex; flex-direction:column; align-items:center; gap:24px; }
+
+  /* Radar card */
+  .d-radar-card {
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:var(--radius-lg); padding:32px 24px 24px;
+    box-shadow:var(--shadow-sm); width:100%; max-width:560px;
+    display:flex; flex-direction:column; align-items:center; position:relative;
+  }
+  .d-radar-card-title { position:absolute; top:18px; left:22px; }
+  .d-radar-card-title h3 { font-size:.9rem; font-weight:700; color:var(--text); }
+  .d-radar-card-title p  { font-size:.72rem; color:var(--text-3); margin-top:1px; }
+
+  /* Radar rings */
+  .d-arcs { position:relative; width:240px; height:240px; margin:8px 0 24px; }
+  .d-arc-ring {
+    position:absolute; border-radius:50%; border:2px solid;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .arc-yaw   { inset:0;    border-color:rgba(0,88,190,0.25); }
+  .arc-pitch { inset:24px; border-color:rgba(107,56,212,0.35); }
+  .arc-roll  { inset:48px; border-color:rgba(130,81,0,0.45);  }
+
+  .d-dot {
+    position:absolute; width:14px; height:14px; border-radius:50%;
+    background:var(--accent); box-shadow:0 0 14px rgba(0,88,190,0.5);
+    transform:translate(-50%,-50%); transition:left .06s, top .06s;
+    pointer-events:none;
+  }
+  .d-center-label { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; }
+  .d-center-inner { text-align:center; }
+  .d-center-big { font-size:2.2rem; font-weight:800; color:var(--text); line-height:1; transition:transform .08s, color .12s; }
+  .d-center-sub { font-size:.6rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--text-3); margin-top:4px; }
+
+  @keyframes hit-pulse { 0%{transform:scale(1.3);opacity:.9} 100%{transform:scale(1);opacity:0} }
+  .d-hit-ring {
+    position:absolute; inset:48px; border-radius:50%;
+    border:2px solid var(--accent); opacity:0; pointer-events:none;
+  }
+
+  /* Axis bars */
+  .d-axis-bars { display:flex; gap:12px; width:100%; max-width:560px; }
+  .dab { flex:1; }
+  .dab-head { display:flex; justify-content:space-between; margin-bottom:5px; }
+  .dab-head span { font-size:.65rem; font-weight:700; }
+  .dab-track { height:6px; background:var(--surface-3); border-radius:3px; overflow:hidden; position:relative; }
+  .dab-fill { height:100%; border-radius:3px; transition:width .05s; }
+  .dab-zero { position:absolute; left:50%; top:0; bottom:0; width:1px; background:var(--border); }
+
+  /* Gesture cards grid */
+  .d-gesture-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; width:100%; max-width:560px; }
+  .d-gest {
+    background:var(--surface); border:1px solid var(--border); border-left-width:4px;
+    border-radius:var(--radius); padding:12px 14px;
+    display:flex; flex-direction:column; gap:3px;
+    transition:all .12s; box-shadow:var(--shadow-sm);
+  }
+  .d-gest.firing { transform:scale(1.04); box-shadow:var(--shadow-md); }
+  .dg-icon    { font-size:1.2rem; line-height:1; margin-bottom:2px; }
+  .dg-drum    { font-size:.82rem; font-weight:700; color:var(--text); }
+  .dg-gesture { font-size:.65rem; font-weight:600; color:var(--text-3); text-transform:uppercase; letter-spacing:.04em; }
+
+  /* Sidebar */
+  .d-sidebar {
+    border-left:1px solid var(--border); background:var(--surface);
+    display:flex; flex-direction:column; overflow-y:auto; overflow-x:hidden;
+    scrollbar-width:thin;
+  }
+  .d-sb-s { padding:18px 20px; border-bottom:1px solid var(--border); }
+  .d-sb-s h3 {
+    font-size:.6rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase;
+    color:var(--text-3); margin-bottom:12px;
+  }
+  .d-setting { margin-bottom:12px; }
+  .d-setting:last-child { margin-bottom:0; }
+  .d-setting label { display:flex; justify-content:space-between; font-size:.73rem; color:var(--text-2); margin-bottom:5px; }
+  .d-setting label span { font-weight:700; color:var(--text); }
+  .d-setting input[type=range] { width:100%; accent-color:var(--accent); }
+
+  .d-log { padding:18px 20px; }
+  .d-log h3 { font-size:.6rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--text-3); margin-bottom:10px; }
+  .d-log-item { display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid var(--border); font-size:.76rem; }
+  .d-log-item:last-child { border:none; }
+  .d-log-drum { font-weight:700; color:var(--text); }
+  .d-log-time { color:var(--text-3); font-variant-numeric:tabular-nums; font-size:.7rem; }
+  .d-log-empty { font-size:.74rem; color:var(--text-3); font-style:italic; line-height:1.6; }
+
+  /* How to play panel */
+  .d-how-banner {
+    background:linear-gradient(135deg, rgba(0,88,190,0.06) 0%, rgba(107,56,212,0.06) 100%);
+    border:1px solid rgba(0,88,190,0.15); border-radius:var(--radius);
+    padding:14px 16px; width:100%; max-width:560px;
+    display:flex; gap:14px; align-items:flex-start;
+  }
+  .d-how-icon-wrap {
+    width:36px; height:36px; border-radius:9px; flex-shrink:0;
+    background:rgba(0,88,190,0.12); display:flex; align-items:center; justify-content:center;
+  }
+  .d-how-body h4 { font-size:.78rem; font-weight:800; color:var(--text); margin-bottom:4px; }
+  .d-how-body p  { font-size:.7rem; color:var(--text-2); line-height:1.6; margin-bottom:8px; }
+  .d-how-list { display:flex; flex-direction:column; gap:5px; }
+  .d-how-row  { display:flex; align-items:center; gap:8px; font-size:.7rem; }
+  .d-how-chip { padding:2px 8px; border-radius:20px; font-weight:700; font-size:.62rem; flex-shrink:0; }
+
+  /* Sidebar how-to section */
+  .d-sb-how { padding:16px 18px; border-bottom:1px solid var(--border); }
+  .d-sb-how h3 { font-size:.6rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--text-3); margin-bottom:10px; }
+  .d-sb-how-note {
+    background:rgba(0,88,190,0.06); border:1px solid rgba(0,88,190,0.15);
+    border-radius:8px; padding:9px 11px; font-size:.7rem; line-height:1.6;
+    color:var(--text-2); margin-bottom:10px; border-left:3px solid var(--accent);
+  }
+  .d-sb-how-note strong { color:var(--text); }
+  .d-sb-gest-rows { display:flex; flex-direction:column; gap:6px; }
+  .d-sb-gest-row  { display:flex; align-items:center; gap:7px; font-size:.69rem; color:var(--text-2); }
+  .d-sb-gest-dot  { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+  .d-sb-gest-key  { font-weight:700; color:var(--text); min-width:70px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-layout">
+  <div class="d-main">
+    <div class="d-topbar">
+      <span class="ms" style="color:var(--accent)">graphic_eq</span>
+      <div class="d-topbar-title">Drum Kit — Motion Controlled</div>
+      <div class="badge" id="d-badge">Waiting for sensor</div>
+      <button class="btn btn-ghost" id="btn-dmute" style="padding:5px 12px;font-size:.72rem">
+        <span class="ms" style="font-size:14px">volume_up</span> Mute
+      </button>
+    </div>
+
+    <div class="d-body">
+      <!-- Motion radar -->
+      <div class="d-radar-card">
+        <div class="d-radar-card-title">
+          <h3>Motion Radar</h3>
+          <p>Spatial sensor tracking</p>
+        </div>
+        <div class="d-arcs">
+          <div class="d-arc-ring arc-yaw"></div>
+          <div class="d-arc-ring arc-pitch"></div>
+          <div class="d-arc-ring arc-roll"></div>
+          <div class="d-hit-ring" id="d-hit-ring"></div>
+          <div class="d-dot" id="d-dot" style="left:50%;top:50%"></div>
+          <div class="d-center-label">
+            <div class="d-center-inner">
+              <div class="d-center-big" id="d-last-drum">—</div>
+              <div class="d-center-sub">last hit</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Axis bars inside radar card -->
+        <div class="d-axis-bars" style="max-width:400px">
+          <div class="dab">
+            <div class="dab-head"><span style="color:var(--c-yaw)">Yaw</span><span id="d-yaw-v" style="color:var(--c-yaw)">0°</span></div>
+            <div class="dab-track"><div class="dab-fill" id="d-yaw-f" style="background:var(--c-yaw);width:50%"></div><div class="dab-zero"></div></div>
+          </div>
+          <div class="dab">
+            <div class="dab-head"><span style="color:var(--c-pitch)">Pitch</span><span id="d-pitch-v" style="color:var(--c-pitch)">0°</span></div>
+            <div class="dab-track"><div class="dab-fill" id="d-pitch-f" style="background:var(--c-pitch);width:50%"></div><div class="dab-zero"></div></div>
+          </div>
+          <div class="dab">
+            <div class="dab-head"><span style="color:var(--c-roll)">Roll</span><span id="d-roll-v" style="color:var(--c-roll)">0°</span></div>
+            <div class="dab-track"><div class="dab-fill" id="d-roll-f" style="background:var(--c-roll);width:50%"></div><div class="dab-zero"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- How to play banner -->
+      <div class="d-how-banner">
+        <div class="d-how-icon-wrap">
+          <span class="ms fill" style="color:var(--accent);font-size:20px">smartphone</span>
+        </div>
+        <div class="d-how-body">
+          <h4>Phone Motion Controls — No Touch Needed</h4>
+          <p>All drum sounds are triggered by physically moving your phone. Do not tap the cards — just move the device.</p>
+          <div class="d-how-list">
+            <div class="d-how-row">
+              <span class="d-how-chip" style="background:rgba(107,56,212,0.12);color:#6b38d4">Pitch</span>
+              <span>Tilt <strong>forward</strong> = Kick &nbsp;|&nbsp; Tilt <strong>back</strong> = Snare</span>
+            </div>
+            <div class="d-how-row">
+              <span class="d-how-chip" style="background:rgba(130,81,0,0.12);color:#825100">Roll</span>
+              <span>Roll <strong>right</strong> = Hi-hat &nbsp;|&nbsp; Roll <strong>left</strong> = Crash</span>
+            </div>
+            <div class="d-how-row">
+              <span class="d-how-chip" style="background:rgba(0,88,190,0.12);color:#0058be">Yaw</span>
+              <span>Swing <strong>right</strong> = Tom-1 &nbsp;|&nbsp; Swing <strong>left</strong> = Tom-2</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Gesture cards -->
+      <div class="d-gesture-grid" id="d-gesture-grid"></div>
+    </div>
+  </div>
+
+  <div class="d-sidebar">
+    <div class="d-sb-how">
+      <h3>How to Play</h3>
+      <div class="d-sb-how-note">
+        <strong>Move phone, not screen.</strong> All sounds are triggered by device motion only — touching the cards does nothing.
+      </div>
+      <div class="d-sb-gest-rows">
+        <div class="d-sb-gest-row"><div class="d-sb-gest-dot" style="background:#6b38d4"></div><span class="d-sb-gest-key">Tilt forward</span>Kick drum</div>
+        <div class="d-sb-gest-row"><div class="d-sb-gest-dot" style="background:#6b38d4"></div><span class="d-sb-gest-key">Tilt back</span>Snare</div>
+        <div class="d-sb-gest-row"><div class="d-sb-gest-dot" style="background:#825100"></div><span class="d-sb-gest-key">Roll right</span>Hi-hat</div>
+        <div class="d-sb-gest-row"><div class="d-sb-gest-dot" style="background:#825100"></div><span class="d-sb-gest-key">Roll left</span>Crash cymbal</div>
+        <div class="d-sb-gest-row"><div class="d-sb-gest-dot" style="background:#0058be"></div><span class="d-sb-gest-key">Swing right</span>Tom-1</div>
+        <div class="d-sb-gest-row"><div class="d-sb-gest-dot" style="background:#0058be"></div><span class="d-sb-gest-key">Swing left</span>Tom-2</div>
+      </div>
+    </div>
+    <div class="d-sb-s">
+      <h3>Motion Settings</h3>
+      <div class="d-setting">
+        <label>Threshold <span id="lbl-thresh">25°</span></label>
+        <input type="range" id="inp-thresh" min="8" max="70" value="25" step="1">
+      </div>
+      <div class="d-setting">
+        <label>Cooldown <span id="lbl-cool">220ms</span></label>
+        <input type="range" id="inp-cool" min="80" max="1200" value="220" step="20">
+      </div>
+      <div class="d-setting">
+        <label>Volume <span id="lbl-vol">80%</span></label>
+        <input type="range" id="inp-vol" min="0" max="100" value="80" step="1">
+      </div>
+    </div>
+    <div class="d-log">
+      <h3>Hit Log</h3>
+      <div id="d-log-list"><div class="d-log-empty">Move your phone to play — pitch/roll/yaw trigger different drums.</div></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* ── Audio Engine ─────────────────────────── */
+const AC = new (window.AudioContext || window.webkitAudioContext)();
+let masterVol = 0.8, muted = false;
+
+function osc(type, freq, dur, vol=1, detune=0) {
+  if (muted) return;
+  const o=AC.createOscillator(), g=AC.createGain();
+  o.type=type; o.frequency.value=freq; o.detune.value=detune;
+  g.gain.setValueAtTime(vol*masterVol, AC.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, AC.currentTime+dur);
+  o.connect(g); g.connect(AC.destination); o.start(); o.stop(AC.currentTime+dur);
+}
+function noise(dur, vol=1, lpF=8000) {
+  if (muted) return;
+  const buf=AC.createBuffer(1,AC.sampleRate*dur,AC.sampleRate);
+  const d=buf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1);
+  const src=AC.createBufferSource(), lp=AC.createBiquadFilter(), g=AC.createGain();
+  lp.type='lowpass'; lp.frequency.value=lpF;
+  g.gain.setValueAtTime(vol*masterVol, AC.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, AC.currentTime+dur);
+  src.buffer=buf; src.connect(lp); lp.connect(g); g.connect(AC.destination); src.start();
+}
+
+const SOUNDS = {
+  kick:    () => { osc('sine',150,.4,.9); osc('sine',60,.5,.9); },
+  snare:   () => { noise(.18,.7,6000); osc('triangle',220,.12,.4); },
+  hihat:   () => { noise(.07,.5,14000); },
+  crash:   () => { noise(1,.55,18000); osc('sawtooth',380,.35,.15); },
+  tom1:    () => { osc('sine',130,.35,.8); },
+  tom2:    () => { osc('sine',95,.4,.8); },
+};
+
+/* Gesture → color mapping (matches axis colors) */
+const GESTURES = [
+  { axis:'pitch', dir: 1,  drum:'kick',  icon:'🥁', label:'Tilt forward',  color:'var(--c-pitch)' },
+  { axis:'pitch', dir:-1,  drum:'snare', icon:'🪘', label:'Tilt back',     color:'var(--c-pitch)' },
+  { axis:'roll',  dir: 1,  drum:'hihat', icon:'🎵', label:'Roll right',    color:'var(--c-roll)'  },
+  { axis:'roll',  dir:-1,  drum:'crash', icon:'💥', label:'Roll left',     color:'var(--c-roll)'  },
+  { axis:'yaw',   dir: 1,  drum:'tom1',  icon:'🥁', label:'Swing right',   color:'var(--c-yaw)'   },
+  { axis:'yaw',   dir:-1,  drum:'tom2',  icon:'🥁', label:'Swing left',    color:'var(--c-yaw)'   },
+];
+
+// Build gesture cards
+const grid = document.getElementById('d-gesture-grid');
+GESTURES.forEach((g,i) => {
+  const el = document.createElement('div');
+  el.className = 'd-gest';
+  el.id = 'gest-' + i;
+  el.style.borderLeftColor = g.color;
+  el.innerHTML =
+    `<div class="dg-icon">${g.icon}</div>` +
+    `<div class="dg-drum">${g.drum.charAt(0).toUpperCase()+g.drum.slice(1)}</div>` +
+    `<div class="dg-gesture">${g.label}</div>`;
+  grid.appendChild(el);
+});
+
+let threshold = 25, cooldownMs = 220;
+let hitLog = [];
+let prevD = {yaw:0,pitch:0,roll:0};
+const lastHit = {};
+GESTURES.forEach(g => lastHit[g.drum+g.dir] = 0);
+
+document.getElementById('inp-thresh').addEventListener('input', e => { threshold=+e.target.value; document.getElementById('lbl-thresh').textContent=threshold+'°'; });
+document.getElementById('inp-cool').addEventListener('input', e => { cooldownMs=+e.target.value; document.getElementById('lbl-cool').textContent=cooldownMs+'ms'; });
+document.getElementById('inp-vol').addEventListener('input', e => { masterVol=e.target.value/100; document.getElementById('lbl-vol').textContent=e.target.value+'%'; });
+
+const btnMute = document.getElementById('btn-dmute');
+btnMute.addEventListener('click', () => {
+  muted = !muted;
+  btnMute.innerHTML = muted
+    ? '<span class="ms" style="font-size:14px">volume_off</span> Unmute'
+    : '<span class="ms" style="font-size:14px">volume_up</span> Mute';
+  btnMute.style.color = muted ? 'var(--red)' : '';
+});
+
+function hitDrum(drum, gestIdx) {
+  AC.resume();
+  const fn = SOUNDS[drum]; if (!fn) return;
+  fn();
+
+  const lbl = document.getElementById('d-last-drum');
+  lbl.textContent = drum.charAt(0).toUpperCase()+drum.slice(1);
+  lbl.style.color = 'var(--accent)';
+  lbl.style.transform = 'scale(1.2)';
+  setTimeout(() => { lbl.style.color='var(--text)'; lbl.style.transform='scale(1)'; }, 200);
+
+  const ring = document.getElementById('d-hit-ring');
+  ring.style.animation = 'none'; void ring.offsetWidth;
+  ring.style.animation = 'hit-pulse .35s ease-out forwards';
+
+  const card = document.getElementById('gest-' + gestIdx);
+  if (card) {
+    const origBg = card.style.background;
+    card.classList.add('firing');
+    card.style.background = 'var(--accent-bg)';
+    setTimeout(() => { card.classList.remove('firing'); card.style.background = origBg; }, 260);
+  }
+
+  hitLog.unshift({ drum, time: new Date().toLocaleTimeString() });
+  document.getElementById('d-log-list').innerHTML = hitLog.slice(0,40).map(h =>
+    `<div class="d-log-item">
+      <span class="d-log-drum">${h.drum.charAt(0).toUpperCase()+h.drum.slice(1)}</span>
+      <span class="d-log-time">${h.time}</span>
+    </div>`
+  ).join('');
+}
+
+function onIMU(d) {
+  AC.resume();
+  document.getElementById('d-badge').textContent = 'Live';
+  document.getElementById('d-badge').className = 'badge live';
+
+  document.getElementById('d-yaw-v').textContent   = d.yaw.toFixed(1)+'°';
+  document.getElementById('d-pitch-v').textContent = d.pitch.toFixed(1)+'°';
+  document.getElementById('d-roll-v').textContent  = d.roll.toFixed(1)+'°';
+  document.getElementById('d-yaw-f').style.width   = (d.yaw/360*100).toFixed(1)+'%';
+  document.getElementById('d-pitch-f').style.width = ((d.pitch+90)/180*100).toFixed(1)+'%';
+  document.getElementById('d-roll-f').style.width  = ((d.roll+90)/180*100).toFixed(1)+'%';
+
+  const dotX = (d.yaw/360)*100;
+  const dotY = ((d.pitch+90)/180)*100;
+  const dot = document.getElementById('d-dot');
+  dot.style.left = dotX.toFixed(1)+'%';
+  dot.style.top  = dotY.toFixed(1)+'%';
+  const rollHue = ((d.roll+90)/180)*270;
+  dot.style.background = `hsl(${rollHue.toFixed(0)},70%,55%)`;
+  dot.style.boxShadow  = `0 0 12px hsl(${rollHue.toFixed(0)},70%,55%,.5)`;
+
+  const now = Date.now();
+  GESTURES.forEach((g,i) => {
+    const cur = d[g.axis], prev = prevD[g.axis];
+    let delta = (cur - prev) * g.dir;
+    if (g.axis === 'yaw') {
+      delta = Math.abs(cur-prev) > 180 ? 0 : (cur-prev)*g.dir;
+    }
+    if (delta > threshold && now - (lastHit[g.drum+g.dir]||0) > cooldownMs) {
+      lastHit[g.drum+g.dir] = now;
+      hitDrum(g.drum, i);
+    }
+  });
+  prevD = {...d};
+}
+</script>
+{% endblock %}

@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Motion Studio — Sender</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+  :root {
+    --bg:      #faf8ff;
+    --surface: #ffffff;
+    --surface-2:#f2f3ff;
+    --surface-3:#eaedff;
+    --border:  #c2c6d6;
+    --text:    #131b2e;
+    --text-2:  #424754;
+    --text-3:  #727785;
+    --blue:    #0058be;
+    --purple:  #6b38d4;
+    --amber:   #825100;
+    --green:   #1a7a3b;
+    --red:     #ba1a1a;
+    --r:12px;
+  }
+  .ms { font-family:'Material Symbols Outlined'; font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24; line-height:1; user-select:none; }
+
+  html,body { height:100%; background:var(--bg); color:var(--text); font-family:'Plus Jakarta Sans',system-ui,sans-serif; -webkit-font-smoothing:antialiased; overflow-x:hidden; }
+
+  /* ── Shell ────────────────────── */
+  .shell { min-height:100dvh; display:flex; flex-direction:column; padding:24px 20px 36px; gap:0; }
+
+  /* ── Header ───────────────────── */
+  .hdr { display:flex; align-items:center; gap:10px; margin-bottom:28px; }
+  .hdr-logo { width:38px; height:38px; border-radius:10px; background:linear-gradient(135deg,#0058be,#6b38d4); display:flex; align-items:center; justify-content:center; box-shadow:0 2px 8px rgba(0,88,190,0.3); flex-shrink:0; }
+  .hdr-logo .ms { color:#fff; font-size:20px; }
+  .hdr-title { font-size:1rem; font-weight:800; color:var(--text); }
+  .hdr-sub   { font-size:.66rem; color:var(--text-3); margin-top:1px; }
+
+  /* ── Status ring ──────────────── */
+  .status-wrap { display:flex; flex-direction:column; align-items:center; margin-bottom:28px; }
+  .status-ring {
+    width:130px; height:130px; border-radius:50%;
+    border:3px solid var(--border);
+    background:var(--surface); box-shadow:0 2px 12px rgba(0,0,0,0.07);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;
+    transition:border-color .3s, box-shadow .3s;
+  }
+  .status-ring.connected    { border-color:var(--green); box-shadow:0 0 0 8px rgba(26,122,59,.08); }
+  .status-ring.streaming    { border-color:var(--blue);  box-shadow:0 0 0 8px rgba(0,88,190,.1); }
+  .status-ring.disconnected { border-color:var(--red);   box-shadow:0 0 0 6px rgba(186,26,26,.08); }
+  .status-ring.connecting   { border-color:var(--amber); }
+
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .ring-icon .ms { font-size:34px; display:block; }
+  .ring-icon .ms.spinning { animation:spin 1.2s linear infinite; }
+  .ring-state { font-size:.62rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--text-3); }
+
+  .conn-label { margin-top:10px; font-size:.78rem; font-weight:500; color:var(--text-3); text-align:center; min-height:1.1em; }
+  .conn-label.ok  { color:var(--green); }
+  .conn-label.err { color:var(--red); }
+
+  /* ── Value cards ──────────────── */
+  .vals { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:24px; }
+  .val-card {
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:var(--r); padding:14px 10px; text-align:center;
+    box-shadow:0 1px 3px rgba(0,0,0,0.06);
+  }
+  .val-label { font-size:.58rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; margin-bottom:6px; }
+  .val-num   { font-size:1.2rem; font-weight:700; font-variant-numeric:tabular-nums; }
+  .val-bar   { height:3px; border-radius:2px; background:var(--surface-3); margin-top:8px; overflow:hidden; }
+  .val-fill  { height:100%; border-radius:2px; transition:width .1s; }
+
+  /* ── Start button ─────────────── */
+  .start-btn {
+    width:100%; padding:18px;
+    border-radius:14px; border:none; cursor:pointer;
+    font-family:inherit; font-size:1.05rem; font-weight:700;
+    background:var(--blue); color:#fff;
+    display:flex; align-items:center; justify-content:center; gap:10px;
+    transition:all .15s; -webkit-tap-highlight-color:transparent;
+    box-shadow:0 4px 16px rgba(0,88,190,0.28);
+    margin-bottom:16px;
+  }
+  .start-btn:active { transform:scale(.97); }
+  .start-btn.stop { background:var(--red); box-shadow:0 4px 16px rgba(186,26,26,0.28); }
+  .start-btn:disabled { opacity:.45; cursor:not-allowed; box-shadow:none; }
+  .start-btn .ms { font-size:22px; }
+
+  .rate-counter { text-align:center; font-size:.7rem; color:var(--text-3); margin-bottom:20px; min-height:1em; }
+
+  /* ── Settings ─────────────────── */
+  .settings-card {
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:var(--r); overflow:hidden;
+    box-shadow:0 1px 3px rgba(0,0,0,0.06);
+  }
+  .settings-card summary {
+    font-size:.8rem; font-weight:600; color:var(--text-2); cursor:pointer;
+    padding:14px 18px; list-style:none;
+    display:flex; align-items:center; gap:8px;
+  }
+  .settings-card summary .ms { font-size:18px; color:var(--text-3); }
+  .settings-card summary .arr { margin-left:auto; font-size:16px; transition:transform .2s; }
+  details[open] .arr { transform:rotate(180deg); }
+
+  .settings-body { padding:4px 18px 16px; display:flex; flex-direction:column; gap:14px; border-top:1px solid var(--border); }
+  .s-row { display:flex; justify-content:space-between; align-items:center; }
+  .s-row-label { font-size:.8rem; color:var(--text-2); font-weight:500; }
+  .s-row-val   { font-size:.8rem; font-weight:700; color:var(--text); min-width:38px; text-align:right; }
+  .s-row input[type=range] { width:120px; accent-color:var(--blue); }
+</style>
+</head>
+<body>
+<div class="shell">
+  <!-- Header -->
+  <div class="hdr">
+    <div class="hdr-logo"><span class="ms fill">sensors</span></div>
+    <div>
+      <div class="hdr-title">Motion Studio</div>
+      <div class="hdr-sub">Motion streaming to dashboard</div>
+    </div>
+  </div>
+
+  <!-- Status ring -->
+  <div class="status-wrap">
+    <div class="status-ring connecting" id="ring">
+      <div class="ring-icon">
+        <span class="ms spinning" id="s-icon">sync</span>
+      </div>
+      <div class="ring-state" id="s-text">Connecting</div>
+    </div>
+    <div class="conn-label" id="conn-label">Connecting to dashboard…</div>
+  </div>
+
+  <!-- Axis values -->
+  <div class="vals">
+    <div class="val-card">
+      <div class="val-label" style="color:var(--blue)">Yaw</div>
+      <div class="val-num" id="v-yaw" style="color:var(--blue)">—</div>
+      <div class="val-bar"><div class="val-fill" id="vb-yaw" style="background:var(--blue);width:50%"></div></div>
+    </div>
+    <div class="val-card">
+      <div class="val-label" style="color:var(--purple)">Pitch</div>
+      <div class="val-num" id="v-pitch" style="color:var(--purple)">—</div>
+      <div class="val-bar"><div class="val-fill" id="vb-pitch" style="background:var(--purple);width:50%"></div></div>
+    </div>
+    <div class="val-card">
+      <div class="val-label" style="color:var(--amber)">Roll</div>
+      <div class="val-num" id="v-roll" style="color:var(--amber)">—</div>
+      <div class="val-bar"><div class="val-fill" id="vb-roll" style="background:var(--amber);width:50%"></div></div>
+    </div>
+  </div>
+
+  <!-- Start button -->
+  <button class="start-btn" id="start-btn" disabled>
+    <span class="ms">sync</span>
+    <span id="btn-label">Connecting…</span>
+  </button>
+
+  <div class="rate-counter" id="rate-lbl"></div>
+
+  <!-- Settings -->
+  <details class="settings-card">
+    <summary>
+      <span class="ms">tune</span>
+      Settings
+      <span class="ms arr">expand_more</span>
+    </summary>
+    <div class="settings-body">
+      <div class="s-row">
+        <span class="s-row-label">Send interval</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="s-row-val" id="lbl-int">50ms</span>
+          <input type="range" id="inp-int" min="20" max="500" value="50" step="10">
+        </div>
+      </div>
+      <div class="s-row">
+        <span class="s-row-label">Smoothing</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="s-row-val" id="lbl-smooth">0%</span>
+          <input type="range" id="inp-smooth" min="0" max="90" value="0" step="5">
+        </div>
+      </div>
+    </div>
+  </details>
+</div>
+
+<script src="/static/socket.io.min.js"></script>
+<script>
+const SERVER_URL = "{{ server_url }}";
+
+let socket = null, streaming = false;
+let intervalMs = 50, smoothing = 0;
+let sendTimer = null, rateCount = 0, rateTimer = null;
+let lastYaw=0, lastPitch=0, lastRoll=0;
+
+const ring     = document.getElementById('ring');
+const sIcon    = document.getElementById('s-icon');
+const sText    = document.getElementById('s-text');
+const connLbl  = document.getElementById('conn-label');
+const startBtn = document.getElementById('start-btn');
+const btnLbl   = document.getElementById('btn-label');
+const rateLbl  = document.getElementById('rate-lbl');
+
+document.getElementById('inp-int').addEventListener('input', e => {
+  intervalMs = +e.target.value;
+  document.getElementById('lbl-int').textContent = intervalMs+'ms';
+  if (streaming) restartTimer();
+});
+document.getElementById('inp-smooth').addEventListener('input', e => {
+  smoothing = +e.target.value / 100;
+  document.getElementById('lbl-smooth').textContent = e.target.value+'%';
+});
+
+function setRing(state) {
+  ring.className = 'status-ring ' + state;
+  const cfg = {
+    connecting:  { icon:'sync',         spin:true,  text:'Connecting',  },
+    connected:   { icon:'check_circle',  spin:false, text:'Connected',   },
+    streaming:   { icon:'sensors',       spin:false, text:'Streaming',   },
+    disconnected:{ icon:'signal_disconnected', spin:false, text:'Offline' },
+    error:       { icon:'error',         spin:false, text:'Error',       },
+  };
+  const c = cfg[state] || cfg.connecting;
+  sIcon.textContent = c.icon;
+  sIcon.className = 'ms' + (c.spin ? ' spinning fill' : ' fill');
+  sText.textContent = c.text;
+}
+
+function connectSocket() {
+  setRing('connecting');
+  connLbl.textContent = 'Connecting to dashboard…'; connLbl.className = 'conn-label';
+  socket = io(SERVER_URL, { transports:['websocket'], reconnection:true, reconnectionDelay:2000 });
+  socket.on('connect', () => {
+    setRing('connected');
+    connLbl.textContent = 'Connected — ready to stream'; connLbl.className = 'conn-label ok';
+    startBtn.disabled = false;
+    startBtn.className = 'start-btn';
+    sIcon.textContent = 'check_circle';
+    btnLbl.textContent = 'Start Streaming';
+    startBtn.querySelector('.ms').textContent = 'play_arrow';
+  });
+  socket.on('disconnect', () => {
+    setRing('disconnected');
+    connLbl.textContent = 'Disconnected from dashboard'; connLbl.className = 'conn-label err';
+    if (streaming) stopStream();
+    startBtn.disabled = true;
+  });
+  socket.on('connect_error', () => {
+    setRing('error');
+    connLbl.textContent = 'Cannot reach dashboard — check WiFi & IP'; connLbl.className = 'conn-label err';
+    startBtn.disabled = false;
+    btnLbl.textContent = 'Retry';
+    startBtn.querySelector('.ms').textContent = 'refresh';
+  });
+}
+
+function listenSensor() {
+  if (typeof DeviceOrientationEvent === 'undefined') {
+    connLbl.textContent = 'Sensor not available on this browser'; connLbl.className = 'conn-label err'; return;
+  }
+  const go = () => {
+    window.addEventListener('deviceorientation', e => {
+      const α = e.alpha ?? 0, β = e.beta ?? 0, γ = e.gamma ?? 0;
+      const a = smoothing, b = 1-a;
+      lastYaw   = lastYaw*a   + α*b;
+      lastPitch = lastPitch*a + β*b;
+      lastRoll  = lastRoll*a  + γ*b;
+      document.getElementById('v-yaw').textContent   = lastYaw.toFixed(1)+'°';
+      document.getElementById('v-pitch').textContent = lastPitch.toFixed(1)+'°';
+      document.getElementById('v-roll').textContent  = lastRoll.toFixed(1)+'°';
+      document.getElementById('vb-yaw').style.width   = (lastYaw/360*100).toFixed(1)+'%';
+      document.getElementById('vb-pitch').style.width = ((lastPitch+90)/180*100).toFixed(1)+'%';
+      document.getElementById('vb-roll').style.width  = ((lastRoll+90)/180*100).toFixed(1)+'%';
+    }, true);
+  };
+  if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+    DeviceOrientationEvent.requestPermission().then(s => { if (s==='granted') go(); }).catch(()=>{});
+  } else {
+    go();
+  }
+}
+
+function startStream() {
+  streaming = true;
+  startBtn.className = 'start-btn stop';
+  startBtn.querySelector('.ms').textContent = 'stop';
+  btnLbl.textContent = 'Stop Streaming';
+  setRing('streaming');
+  connLbl.textContent = 'Streaming live data'; connLbl.className = 'conn-label ok';
+  listenSensor();
+  rateCount = 0;
+  rateTimer = setInterval(() => { rateLbl.textContent = rateCount+' packets/s'; rateCount = 0; }, 1000);
+  restartTimer();
+}
+
+function stopStream() {
+  streaming = false;
+  clearInterval(sendTimer); clearInterval(rateTimer);
+  startBtn.className = 'start-btn';
+  startBtn.querySelector('.ms').textContent = 'play_arrow';
+  btnLbl.textContent = 'Start Streaming';
+  setRing('connected');
+  connLbl.textContent = 'Connected — ready to stream'; connLbl.className = 'conn-label ok';
+  rateLbl.textContent = '';
+}
+
+function restartTimer() {
+  clearInterval(sendTimer);
+  sendTimer = setInterval(() => {
+    if (!socket?.connected) return;
+    socket.emit('phone_imu', { yaw:+lastYaw.toFixed(3), pitch:+lastPitch.toFixed(3), roll:+lastRoll.toFixed(3) });
+    rateCount++;
+  }, intervalMs);
+}
+
+startBtn.addEventListener('click', () => {
+  if (!socket?.connected) { connectSocket(); return; }
+  if (streaming) stopStream(); else startStream();
+});
+
+connectSocket();
+</script>
+</body>
+</html>
