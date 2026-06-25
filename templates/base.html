@@ -3,579 +3,119 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{% block title %}Dashboard{% endblock %} — Motion Studio</title>
+  <title>{% block title %}Sessions{% endblock %} — Motion Studio</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
   <style>
-    /* ── Design Tokens ─────────────────────────── */
     :root {
-      /* Light theme main surfaces */
       --bg:        #faf8ff;
       --surface:   #ffffff;
       --surface-2: #f2f3ff;
       --surface-3: #eaedff;
       --surface-4: #e2e7ff;
-
-      /* Borders */
       --border:    #c2c6d6;
       --border-2:  #727785;
-
-      /* Text */
-      --text:   #131b2e;
-      --text-2: #424754;
-      --text-3: #727785;
-
-      /* Primary (Blue) */
-      --accent:      #0058be;
-      --accent-dk:   #004395;
-      --accent-bg:   rgba(0,88,190,0.10);
-      --accent-glow: rgba(0,88,190,0.20);
-      --blue:        #0058be;
-      --blue-bg:     rgba(0,88,190,0.10);
-
-      /* Secondary (Purple) */
+      --text:      #131b2e;
+      --text-2:    #424754;
+      --text-3:    #727785;
+      --accent:    #0058be;
+      --accent-dk: #004395;
+      --accent-bg: rgba(0,88,190,0.10);
       --purple:    #6b38d4;
       --purple-bg: rgba(107,56,212,0.10);
-
-      /* Tertiary (Amber) */
-      --amber:    #825100;
-      --amber-bg: rgba(130,81,0,0.10);
-
-      /* Status */
-      --green:    #1a7a3b;
-      --green-bg: rgba(26,122,59,0.10);
-      --red:      #ba1a1a;
-      --red-bg:   rgba(186,26,26,0.10);
-
-      /* Axis colors */
-      --c-yaw:   #0058be;
-      --c-pitch: #6b38d4;
-      --c-roll:  #825100;
-
-      /* Sidebar dark navy */
-      --sb-bg:      #131b2e;
-      --sb-border:  rgba(255,255,255,0.10);
-      --sb-text:    rgba(255,255,255,0.90);
-      --sb-text-2:  rgba(255,255,255,0.60);
-      --sb-text-3:  rgba(255,255,255,0.40);
-      --sb-hover:   rgba(255,255,255,0.06);
-      --sb-active:  rgba(33,112,228,0.25);
-
-      /* Layout */
-      --sidebar-w: 220px;
+      --amber:     #825100;
+      --amber-bg:  rgba(130,81,0,0.10);
+      --green:     #1a7a3b;
+      --green-bg:  rgba(26,122,59,0.10);
+      --red:       #ba1a1a;
+      --red-bg:    rgba(186,26,26,0.10);
+      --c-yaw:     #0058be;
+      --c-pitch:   #6b38d4;
+      --c-roll:    #825100;
       --radius:    8px;
       --radius-lg: 12px;
       --shadow-sm: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
       --shadow-md: 0 4px 12px rgba(0,0,0,0.10), 0 2px 4px rgba(0,0,0,0.06);
-      --shadow-lg: 0 10px 30px rgba(0,0,0,0.12), 0 4px 8px rgba(0,0,0,0.06);
-
       --font: 'Plus Jakarta Sans', system-ui, sans-serif;
-      --ease: cubic-bezier(.4,0,.2,1);
     }
-
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    body { background:var(--bg); color:var(--text); font-family:var(--font); font-size:13px; line-height:1.5; -webkit-font-smoothing:antialiased; min-height:100vh; }
     .ms { font-family:'Material Symbols Outlined'; font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 20; font-size:18px; line-height:1; user-select:none; }
     .ms.fill { font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 20; }
 
-    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
-    html { height:100%; }
-    body {
-      background:var(--bg); color:var(--text);
-      font-family:var(--font); font-size:13px; line-height:1.5;
-      -webkit-font-smoothing:antialiased;
-      display:flex; min-height:100vh;
+    /* ── Top header ─────────────────────────────── */
+    .ms-topbar {
+      height:56px; background:#131b2e;
+      display:flex; align-items:center; gap:14px; padding:0 28px;
+      position:sticky; top:0; z-index:100;
+      box-shadow:0 2px 8px rgba(0,0,0,0.15);
     }
+    .ms-logo {
+      width:32px; height:32px; border-radius:8px; flex-shrink:0;
+      background:linear-gradient(135deg,#0058be,#6b38d4);
+      display:flex; align-items:center; justify-content:center;
+    }
+    .ms-logo .ms { color:#fff; font-size:17px; }
+    .ms-brand  { font-size:.9rem; font-weight:800; color:#fff; letter-spacing:-.01em; }
+    .ms-divider{ width:1px; height:18px; background:rgba(255,255,255,0.15); }
+    .ms-sub    { font-size:.75rem; font-weight:600; color:rgba(255,255,255,0.50); }
+    .ms-topbar-right { margin-left:auto; display:flex; align-items:center; gap:8px; }
+    .ms-chip {
+      padding:4px 12px; border-radius:20px; font-size:.68rem; font-weight:700;
+      background:rgba(0,88,190,0.25); color:rgba(255,255,255,0.85);
+      border:1px solid rgba(0,88,190,0.4); display:flex; align-items:center; gap:5px;
+    }
+    .ms-chip .ms { font-size:13px; }
 
-    /* ── Sidebar ─────────────────────────────────── */
-    .sidebar {
-      width:var(--sidebar-w); flex-shrink:0;
-      background:var(--sb-bg);
-      border-right:1px solid var(--sb-border);
-      display:flex; flex-direction:column;
-      height:100vh; position:fixed; top:0; left:0; z-index:200;
-    }
+    /* ── Page wrapper ───────────────────────────── */
+    main { padding:40px 28px 80px; max-width:1000px; margin:0 auto; }
 
-    /* Brand */
-    .sb-brand {
-      display:flex; align-items:center; gap:10px;
-      padding:18px 16px 16px;
-      border-bottom:1px solid var(--sb-border);
-      flex-shrink:0; text-decoration:none;
-    }
-    .sb-logo {
-      width:34px; height:34px; border-radius:9px;
-      background:linear-gradient(135deg, #0058be 0%, #6b38d4 100%);
-      display:flex; align-items:center; justify-content:center; flex-shrink:0;
-      box-shadow:0 2px 8px rgba(0,88,190,0.4);
-    }
-    .sb-logo .ms { color:#fff; font-size:17px; }
-    .sb-name { font-size:.84rem; font-weight:800; color:var(--sb-text); letter-spacing:-.3px; }
-    .sb-sub  { font-size:.6rem; color:var(--sb-text-3); letter-spacing:.08em; text-transform:uppercase; margin-top:1px; }
-
-    /* Nav */
-    .sb-nav { flex:1; overflow-y:auto; overflow-x:hidden; padding:10px 0 4px; scrollbar-width:none; }
-    .sb-nav::-webkit-scrollbar { display:none; }
-
-    .sb-group {
-      font-size:.58rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase;
-      color:var(--sb-text-3); padding:14px 16px 5px;
-    }
-
-    .sb-link {
-      display:flex; align-items:center; gap:10px;
-      padding:8px 14px; margin:1px 8px; border-radius:7px;
-      font-size:.79rem; font-weight:500; color:var(--sb-text-2);
-      text-decoration:none; transition:all .15s var(--ease);
-    }
-    .sb-link .ms { font-size:17px; opacity:.7; transition:opacity .15s; }
-    .sb-link:hover { color:var(--sb-text); background:var(--sb-hover); }
-    .sb-link:hover .ms { opacity:1; }
-    .sb-link.active {
-      color:var(--sb-text); background:var(--sb-active);
-      font-weight:600; position:relative;
-    }
-    .sb-link.active::before {
-      content:''; position:absolute; left:-8px; top:6px; bottom:6px;
-      width:3px; background:#0058be; border-radius:0 3px 3px 0;
-    }
-    .sb-link.active .ms { opacity:1; color:#adc6ff; }
-
-    .sb-sep { height:1px; background:var(--sb-border); margin:8px 14px; }
-
-    /* Footer */
-    .sb-footer {
-      border-top:1px solid var(--sb-border);
-      padding:12px 12px 14px;
-      display:flex; flex-direction:column; gap:8px; flex-shrink:0;
-    }
-
-    .sb-conn {
-      display:flex; align-items:center; gap:8px;
-      padding:7px 10px; border-radius:7px;
-      background:rgba(255,255,255,0.05); border:1px solid var(--sb-border);
-    }
-    .conn-dot { width:7px; height:7px; border-radius:50%; background:rgba(255,255,255,0.2); flex-shrink:0; transition:background .4s; }
-    .conn-dot.live { background:#22c55e; box-shadow:0 0 0 3px rgba(34,197,94,0.2); }
-    .conn-dot.err  { background:#ef4444; }
-    .conn-text { font-size:.72rem; font-weight:500; color:var(--sb-text-2); flex:1; }
-
-    .sess-start-btn {
-      display:flex; align-items:center; justify-content:center; gap:7px;
-      width:100%; padding:9px 12px; border-radius:7px;
-      border:none; background:#0058be; color:#ffffff;
-      cursor:pointer; font:600 .76rem var(--font);
-      transition:all .15s var(--ease);
-      box-shadow:0 2px 8px rgba(0,88,190,0.3);
-    }
-    .sess-start-btn:hover { background:#004395; box-shadow:0 4px 12px rgba(0,88,190,0.4); }
-    .sess-start-btn .ms { font-size:15px; }
-
-    .sess-active-pill {
-      display:none; align-items:center; gap:6px;
-      padding:7px 9px; border-radius:7px;
-      border:1px solid rgba(34,197,94,0.3); background:rgba(34,197,94,0.1);
-    }
-    @keyframes softpulse { 0%,100%{opacity:1} 50%{opacity:.25} }
-    .sess-dot { width:6px; height:6px; border-radius:50%; background:#22c55e; flex-shrink:0; animation:softpulse 2s infinite; }
-    .sess-feature-name { font-size:.68rem; font-weight:600; color:#4ade80; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .sess-timer { font-size:.68rem; font-variant-numeric:tabular-nums; color:#4ade80; }
-    .sess-end-btn {
-      padding:2px 8px; border-radius:4px; cursor:pointer;
-      background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3);
-      color:#ef4444; font:500 .68rem var(--font); transition:background .1s;
-    }
-    .sess-end-btn:hover { background:rgba(239,68,68,0.25); }
-
-    /* ── Modal ─────────────────────────────────── */
-    .modal-backdrop {
-      display:none; position:fixed; inset:0; z-index:1000;
-      background:rgba(19,27,46,0.5); backdrop-filter:blur(6px);
-      align-items:center; justify-content:center;
-    }
-    .modal-backdrop.open { display:flex; animation:fadeIn .15s var(--ease); }
-    @keyframes fadeIn { from{opacity:0} to{opacity:1} }
-
-    .modal {
-      background:var(--surface); border:1px solid var(--border);
-      border-radius:16px; padding:28px; width:400px; max-width:calc(100vw - 40px);
-      box-shadow:var(--shadow-lg);
-      animation:slideUp .18s var(--ease);
-    }
-    @keyframes slideUp { from{transform:translateY(10px);opacity:0} to{transform:translateY(0);opacity:1} }
-    .modal-title { font-size:1rem; font-weight:700; color:var(--text); margin-bottom:5px; }
-    .modal-sub   { font-size:.8rem; color:var(--text-3); margin-bottom:20px; line-height:1.6; }
-
-    .modal-features { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:22px; }
-    .modal-feat-btn {
-      display:flex; flex-direction:column; gap:8px; align-items:flex-start;
-      padding:14px; border-radius:10px;
-      border:1.5px solid var(--border); background:var(--surface-2);
-      cursor:pointer; transition:all .15s; text-align:left;
-    }
-    .modal-feat-btn .mf-icon { width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; }
-    .modal-feat-btn .mf-icon .ms { font-size:16px; }
-    .modal-feat-btn .mf-name { font-size:.78rem; font-weight:600; color:var(--text-2); }
-    .modal-feat-btn:hover { border-color:var(--border-2); background:var(--surface-3); }
-    .modal-feat-btn.selected { border-color:var(--accent); background:var(--accent-bg); }
-    .modal-feat-btn.selected .mf-name { color:var(--accent); }
-
-    .modal-actions { display:flex; gap:8px; justify-content:flex-end; }
-
-    /* ── Page shell ─────────────────────────────── */
-    main { margin-left:var(--sidebar-w); flex:1; min-height:100vh; overflow:hidden; animation:pageFadeIn .2s var(--ease); }
-    @keyframes pageFadeIn { from{opacity:0} to{opacity:1} }
-    @keyframes ms-spin { to { transform:rotate(360deg); display:inline-block; } }
-
-    /* ── Sync toast ─────────────────────────── */
-    #sync-toast {
-      position:fixed; bottom:24px; right:24px; z-index:9999;
-      padding:11px 16px; border-radius:10px; font-size:.78rem; font-weight:600;
-      display:flex; align-items:center; gap:8px;
-      box-shadow:0 4px 20px rgba(0,0,0,.14);
-      opacity:0; transform:translateY(10px);
-      transition:opacity .3s, transform .3s;
-      pointer-events:none;
-    }
-    #sync-toast.show { opacity:1; transform:translateY(0); }
-    #sync-toast .spin { animation:spin-icon .8s linear infinite; display:inline-block; }
-    @keyframes spin-icon { to { transform:rotate(360deg); } }
-
-    /* ── Shared components ──────────────────────── */
-    .card {
-      background:var(--surface); border:1px solid var(--border);
-      border-radius:var(--radius-lg); padding:20px;
-      box-shadow:var(--shadow-sm);
-    }
-    .card-title {
-      font-size:.82rem; font-weight:700; color:var(--text); margin-bottom:4px;
-    }
-    .card-label {
-      font-size:.6rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase;
-      color:var(--text-3); margin-bottom:10px;
-    }
-
-    .btn {
-      display:inline-flex; align-items:center; gap:6px; padding:8px 16px;
-      border-radius:var(--radius); border:1.5px solid transparent; cursor:pointer;
-      font:600 .78rem var(--font); text-decoration:none;
-      transition:all .15s var(--ease); white-space:nowrap;
-    }
-    .btn .ms { font-size:15px; flex-shrink:0; }
-    .btn-primary { background:var(--accent); color:#fff; border-color:var(--accent); box-shadow:0 2px 6px rgba(0,88,190,0.25); }
-    .btn-primary:hover { background:var(--accent-dk); border-color:var(--accent-dk); box-shadow:0 4px 12px rgba(0,88,190,0.35); }
-    .btn-secondary { background:var(--purple); color:#fff; border-color:var(--purple); }
-    .btn-secondary:hover { background:#5a2db5; }
-    .btn-ghost { background:var(--surface-2); color:var(--text-2); border-color:var(--border); }
-    .btn-ghost:hover { border-color:var(--border-2); color:var(--text); background:var(--surface-3); }
-    .btn-danger { background:var(--red-bg); color:var(--red); border-color:rgba(186,26,26,0.25); }
-    .btn-danger:hover { background:rgba(186,26,26,0.18); }
-
+    /* ── Utilities ──────────────────────────────── */
     .badge {
       display:inline-flex; align-items:center; gap:4px;
       padding:3px 10px; border-radius:20px; font-size:.68rem; font-weight:600;
-      background:var(--surface-3); border:1px solid var(--border); color:var(--text-3);
+      background:var(--surface-3); color:var(--text-2); border:1px solid var(--border);
     }
-    .badge.live { background:rgba(26,122,59,0.12); border-color:rgba(26,122,59,0.25); color:var(--green); }
-    .badge.primary { background:var(--accent-bg); border-color:rgba(0,88,190,0.2); color:var(--accent); }
+    .card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); box-shadow:var(--shadow-sm); }
+    .card-title { font-size:.62rem; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--text-3); }
+    .btn {
+      display:inline-flex; align-items:center; gap:6px; padding:8px 16px;
+      border-radius:var(--radius); font-size:.78rem; font-weight:600;
+      font-family:var(--font); cursor:pointer; border:none; transition:all .15s; text-decoration:none;
+    }
+    .btn .ms { font-size:15px; }
+    .btn-ghost   { background:var(--surface-2); border:1.5px solid var(--border); color:var(--text-2); }
+    .btn-ghost:hover { border-color:var(--accent); color:var(--accent); }
+    .btn-primary { background:var(--accent); color:#fff; }
+    .btn-primary:hover { background:var(--accent-dk); }
+    .btn-danger  { background:var(--red-bg); border:1.5px solid rgba(186,26,26,0.25); color:var(--red); }
 
-    /* Axis pill tags */
-    .axis-pill {
-      display:inline-flex; align-items:center; gap:5px;
-      padding:3px 10px; border-radius:20px; font-size:.68rem; font-weight:700;
-      font-variant-numeric:tabular-nums;
-    }
-    .axis-pill.yaw   { background:rgba(0,88,190,0.10);   color:var(--c-yaw);   }
-    .axis-pill.pitch { background:rgba(107,56,212,0.10); color:var(--c-pitch); }
-    .axis-pill.roll  { background:rgba(130,81,0,0.10);   color:var(--c-roll);  }
-
-    /* Scrollbar */
-    ::-webkit-scrollbar { width:5px; height:5px; }
-    ::-webkit-scrollbar-track { background:transparent; }
-    ::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
-
-    /* Page top bar */
-    .page-bar {
-      height:52px; border-bottom:1px solid var(--border);
-      display:flex; align-items:center; padding:0 24px; gap:10px;
-      background:var(--surface); position:sticky; top:0; z-index:100;
-      box-shadow:0 1px 0 var(--border);
-    }
-    .page-bar-title { font-size:.9rem; font-weight:700; color:var(--text); flex:1; }
-    .page-bar-sub   { font-size:.74rem; color:var(--text-3); }
-
-    /* Section label */
-    .section-label {
-      font-size:.65rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase;
-      color:var(--text-3); margin-bottom:12px;
-    }
-
-    /* Frosted HUD (for canvas pages) */
-    .frosted-hud {
-      background:rgba(255,255,255,0.80); backdrop-filter:blur(10px);
-      border:1px solid rgba(255,255,255,0.5); border-radius:10px;
-    }
-    .frosted-hud-dark {
-      background:rgba(19,27,46,0.80); backdrop-filter:blur(10px);
-      border:1px solid rgba(255,255,255,0.12); border-radius:10px;
-    }
+    /* Feature badge colours */
+    .sf-draw    { background:rgba(0,88,190,0.10);   color:var(--c-yaw);   border-color:rgba(0,88,190,0.2);   }
+    .sf-cube    { background:rgba(107,56,212,0.10); color:var(--c-pitch); border-color:rgba(107,56,212,0.2); }
+    .sf-phone3d { background:rgba(130,81,0,0.10);   color:var(--c-roll);  border-color:rgba(130,81,0,0.2);   }
+    .sf-drums   { background:rgba(186,26,26,0.10);  color:var(--red);     border-color:rgba(186,26,26,0.2);  }
   </style>
   {% block head %}{% endblock %}
 </head>
 <body>
-
-<!-- ── Sidebar ─────────────────────────────────── -->
-<aside class="sidebar">
-  <a href="/" class="sb-brand">
-    <div class="sb-logo">
-      <span class="ms fill">sensors</span>
-    </div>
-    <div>
-      <div class="sb-name">Motion Studio</div>
-      <div class="sb-sub">Data Monitor</div>
-    </div>
-  </a>
-
-  <nav class="sb-nav">
-    <div class="sb-group">Monitor</div>
-
-    <a href="/draw" class="sb-link {% if active=='draw' %}active{% endif %}">
-      <span class="ms">draw</span>
-      Air Drawing
+  <header class="ms-topbar">
+    <a href="/sessions" style="display:flex;align-items:center;gap:10px;text-decoration:none">
+      <div class="ms-logo"><span class="ms fill">sensors</span></div>
+      <div class="ms-brand">Motion Studio</div>
     </a>
-    <a href="/cube" class="sb-link {% if active=='cube' %}active{% endif %}">
-      <span class="ms">view_in_ar</span>
-      3D Cube
-    </a>
-    <a href="/phone3d" class="sb-link {% if active=='phone3d' %}active{% endif %}">
-      <span class="ms">phone_android</span>
-      Phone 3D
-    </a>
-    <a href="/drums" class="sb-link {% if active=='drums' %}active{% endif %}">
-      <span class="ms">graphic_eq</span>
-      Drum Kit
-    </a>
-
-    <div class="sb-sep"></div>
-    <div class="sb-group">Records</div>
-
-    <a href="/sessions" class="sb-link {% if active=='sessions' %}active{% endif %}">
-      <span class="ms">history</span>
-      Sessions
-    </a>
-
-    <div class="sb-sep"></div>
-    <div class="sb-group">Setup</div>
-
-    <a href="/connect" class="sb-link {% if active=='connect' %}active{% endif %}">
-      <span class="ms">cast_connected</span>
-      How to Connect
-    </a>
-  </nav>
-
-  <div class="sb-footer">
-    <div class="sb-conn">
-      <div class="conn-dot" id="conn-dot"></div>
-      <span class="conn-text" id="conn-label">Offline</span>
+    <div class="ms-divider"></div>
+    <div class="ms-sub">Session Archive</div>
+    <div class="ms-topbar-right">
+      <div class="ms-chip"><span class="ms fill">cloud_done</span> Read-only viewer</div>
     </div>
-    <button class="sess-start-btn" id="sess-start-btn" onclick="openSessionModal()">
-      <span class="ms">add_circle</span>
-      New Session
-    </button>
-    <div class="sess-active-pill" id="sess-active-pill">
-      <div class="sess-dot"></div>
-      <span class="sess-feature-name" id="sess-feature-lbl">—</span>
-      <span class="sess-timer" id="sess-timer">0:00</span>
-      <button class="sess-end-btn" onclick="sessionEnd()">End</button>
-    </div>
-  </div>
-</aside>
+  </header>
 
-<!-- ── Session Feature Modal ─────────────────────── -->
-<div class="modal-backdrop" id="sess-modal">
-  <div class="modal">
-    <div class="modal-title">New Recording Session</div>
-    <div class="modal-sub">Choose which feature to record. The session locks to this feature until you end it.</div>
-    <div class="modal-features">
-      <button class="modal-feat-btn" data-feature="draw" onclick="selectFeature(this)">
-        <div class="mf-icon" style="background:rgba(0,88,190,0.12)">
-          <span class="ms" style="color:#0058be">draw</span>
-        </div>
-        <div class="mf-name">Air Drawing</div>
-      </button>
-      <button class="modal-feat-btn" data-feature="cube" onclick="selectFeature(this)">
-        <div class="mf-icon" style="background:rgba(107,56,212,0.12)">
-          <span class="ms" style="color:#6b38d4">view_in_ar</span>
-        </div>
-        <div class="mf-name">3D Cube</div>
-      </button>
-      <button class="modal-feat-btn" data-feature="phone3d" onclick="selectFeature(this)">
-        <div class="mf-icon" style="background:rgba(130,81,0,0.12)">
-          <span class="ms" style="color:#825100">phone_android</span>
-        </div>
-        <div class="mf-name">Phone 3D</div>
-      </button>
-      <button class="modal-feat-btn" data-feature="drums" onclick="selectFeature(this)">
-        <div class="mf-icon" style="background:rgba(186,26,26,0.12)">
-          <span class="ms" style="color:#ba1a1a">graphic_eq</span>
-        </div>
-        <div class="mf-name">Drum Kit</div>
-      </button>
-    </div>
-    <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="closeSessionModal()">Cancel</button>
-      <button class="btn btn-primary" id="modal-confirm-btn" onclick="confirmSession()" disabled>Start Session</button>
-    </div>
-  </div>
-</div>
+  <main>{% block content %}{% endblock %}</main>
 
-<!-- ── Main ─────────────────────────────────────── -->
-<main>{% block content %}{% endblock %}</main>
-
-<script src="{{ url_for('static', filename='socket.io.min.js') }}"></script>
-<script>
-/* ── Socket ──────────────────────────────────── */
-const socket = io();
-socket.on('connect', () => {
-  document.getElementById('conn-dot').className  = 'conn-dot live';
-  document.getElementById('conn-label').textContent = 'Connected';
-});
-socket.on('disconnect', () => {
-  document.getElementById('conn-dot').className  = 'conn-dot err';
-  document.getElementById('conn-label').textContent = 'Offline';
-});
-socket.on('imu', d => {
-  if (typeof onIMU === 'function') onIMU(d);
-  if (Session.active) Session._buffer.push({ t: Date.now(), ...d });
-});
-
-/* ── Session modal ───────────────────────────── */
-let _selectedFeature = null;
-
-function openSessionModal() {
-  document.getElementById('sess-modal').classList.add('open');
-  document.querySelectorAll('.modal-feat-btn').forEach(b => b.classList.remove('selected'));
-  document.getElementById('modal-confirm-btn').disabled = true;
-  _selectedFeature = null;
-}
-function closeSessionModal() {
-  document.getElementById('sess-modal').classList.remove('open');
-}
-function selectFeature(btn) {
-  document.querySelectorAll('.modal-feat-btn').forEach(b => b.classList.remove('selected'));
-  btn.classList.add('selected');
-  _selectedFeature = btn.dataset.feature;
-  document.getElementById('modal-confirm-btn').disabled = false;
-}
-function confirmSession() {
-  if (!_selectedFeature) return;
-  closeSessionModal();
-  Session.start(_selectedFeature);
-}
-document.getElementById('sess-modal').addEventListener('click', e => {
-  if (e.target === e.currentTarget) closeSessionModal();
-});
-
-/* ── Session Manager ─────────────────────────── */
-const FEAT_LABELS = { draw:'Air Drawing', cube:'3D Cube', phone3d:'Phone 3D', drums:'Drum Kit', general:'General' };
-
-const Session = {
-  active:false, id:null, feature:null,
-  _startTs:0, _timerInt:null, _buffer:[],
-
-  async start(feature) {
-    this.feature = feature || 'general';
-    try {
-      const r = await fetch('/api/session/start', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ feature: this.feature })
-      });
-      const d = await r.json();
-      this.id = d.session_id; this.active = true;
-      this._startTs = Date.now(); this._buffer = [];
-      document.getElementById('sess-start-btn').style.display  = 'none';
-      document.getElementById('sess-active-pill').style.display = 'flex';
-      document.getElementById('sess-feature-lbl').textContent   = FEAT_LABELS[this.feature] || this.feature;
-      this._timerInt = setInterval(() => this._tick(), 1000);
-      if (typeof onSessionStart === 'function') onSessionStart(this.id);
-    } catch(e) { console.error('session start', e); }
-  },
-
-  async end() {
-    if (!this.active) return;
-    clearInterval(this._timerInt);
-
-    // Snapshot before clearing state
-    const readings   = [...this._buffer];
-    const feature    = this.feature;
-    const sid        = this.id;
-    const startedAt  = new Date(this._startTs).toISOString();
-    const endedAt    = new Date().toISOString();
-
-    this.active = false;
-    document.getElementById('sess-start-btn').style.display   = 'inline-flex';
-    document.getElementById('sess-active-pill').style.display = 'none';
-    document.getElementById('sess-timer').textContent = '0:00';
-
-    // Save locally (with original timestamps)
-    try {
-      await fetch('/api/session/end', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ session_id: sid, readings, ended_at: endedAt })
-      });
-    } catch(e) {}
-
-    if (typeof onSessionEnd === 'function') onSessionEnd(sid);
-    this._buffer = []; this.id = null; this.feature = null;
-
-    // Push to Render if URL is configured — preserve original timestamps
-    const renderUrl = (localStorage.getItem('imu_render_url') || '').replace(/\/$/, '');
-    if (renderUrl) {
-      syncToast('syncing');
-      try {
-        const r1  = await fetch(renderUrl + '/api/session/start', {
-          method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ feature, started_at: startedAt })
-        });
-        const { session_id: rid } = await r1.json();
-        await fetch(renderUrl + '/api/session/end', {
-          method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ session_id: rid, readings, ended_at: endedAt })
-        });
-        syncToast('ok');
-      } catch(e) { syncToast('err'); }
-    }
-  },
-
-  _tick() {
-    const s = Math.floor((Date.now() - this._startTs) / 1000);
-    document.getElementById('sess-timer').textContent =
-      Math.floor(s/60) + ':' + String(s%60).padStart(2,'0');
-  }
-};
-
-function sessionEnd() { Session.end(); }
-
-/* ── Render sync toast ───────────────────── */
-function syncToast(state) {
-  let el = document.getElementById('sync-toast');
-  if (!el) { el = document.createElement('div'); el.id = 'sync-toast'; document.body.appendChild(el); }
-  clearTimeout(el._t);
-  if (state === 'syncing') {
-    el.style.cssText = 'background:#f2f3ff;border:1px solid #c2c6d6;color:#424754;';
-    el.innerHTML = '<span class="ms spin">sync</span> Syncing to Render&hellip;';
-  } else if (state === 'ok') {
-    el.style.cssText = 'background:rgba(26,122,59,0.10);border:1px solid rgba(26,122,59,0.3);color:#1a7a3b;';
-    el.innerHTML = '<span class="ms fill">check_circle</span> Synced to Render';
-    el._t = setTimeout(() => el.classList.remove('show'), 3000);
-  } else {
-    el.style.cssText = 'background:rgba(186,26,26,0.10);border:1px solid rgba(186,26,26,0.3);color:#ba1a1a;';
-    el.innerHTML = '<span class="ms">cloud_off</span> Render sync failed — saved locally';
-    el._t = setTimeout(() => el.classList.remove('show'), 5000);
-  }
-  el.classList.add('show');
-}
-</script>
-{% block scripts %}{% endblock %}
+  <script src="{{ url_for('static', filename='chart.min.js') }}"></script>
+  {% block scripts %}{% endblock %}
 </body>
 </html>
