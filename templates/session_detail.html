@@ -98,7 +98,7 @@
   {% if data.readings %}
   <!-- Replay controls -->
   <div class="replay-bar">
-    <button class="replay-btn" id="btn-replay"><span class="ms">play_arrow</span> Replay</button>
+    <button class="replay-btn" id="btn-replay"><span class="ms">play_arrow</span> Chart Replay</button>
     <input type="range" class="replay-prog" id="replay-range" min="0" max="{{ data.readings|length - 1 }}" value="0" step="1">
     <div class="replay-time"><span id="replay-cur">0</span> / {{ data.readings|length }}</div>
     <div class="replay-speed">
@@ -209,7 +209,7 @@ function setReplayBtn(active) {
     btnReplay.innerHTML = '<span class="ms">stop</span> Stop';
     btnReplay.classList.add('active');
   } else {
-    btnReplay.innerHTML = '<span class="ms">play_arrow</span> Replay';
+    btnReplay.innerHTML = '<span class="ms">play_arrow</span> Chart Replay';
     btnReplay.classList.remove('active');
   }
 }
