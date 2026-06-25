@@ -11,6 +11,24 @@ init_db()
 def index():
     return redirect("/sessions")
 
+# ── Feature pages (replay-only on Render) ─────────────────────
+@app.route("/draw")
+def draw():
+    return render_template("draw.html", active="draw")
+
+@app.route("/cube")
+def cube():
+    return render_template("cube.html", active="cube")
+
+@app.route("/phone3d")
+def phone3d():
+    return render_template("phone3d.html", active="phone3d")
+
+@app.route("/drums")
+def drums():
+    return render_template("drums.html", active="drums")
+
+
 @app.route("/sessions")
 def sessions():
     return render_template("sessions.html", sessions=sessions_list())

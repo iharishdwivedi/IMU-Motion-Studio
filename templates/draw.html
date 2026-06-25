@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Air Drawing{% endblock %}
 {% block feature_name %}draw{% endblock %}
+{% block main_class %}full{% endblock %}
 
 {% block head %}
 <style>
@@ -544,5 +545,6 @@ function drawLoop() {
   prevX = brushX; prevY = brushY;
 }
 drawLoop();
+initReplay(onIMU);
 </script>
 {% endblock %}

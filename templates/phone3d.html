@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Phone 3D{% endblock %}
 {% block feature_name %}phone3d{% endblock %}
+{% block main_class %}full{% endblock %}
 
 {% block head %}
 <style>
@@ -233,5 +234,6 @@ resize(); window.addEventListener('resize', resize);
   grp.quaternion.slerp(targetQ, lerpFactor);
   renderer.render(scene,camera);
 })();
+initReplay(onIMU);
 </script>
 {% endblock %}

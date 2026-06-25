@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Drum Kit{% endblock %}
 {% block feature_name %}drums{% endblock %}
+{% block main_class %}full{% endblock %}
 
 {% block head %}
 <style>
@@ -401,5 +402,6 @@ function onIMU(d) {
   });
   prevD = {...d};
 }
+initReplay(onIMU);
 </script>
 {% endblock %}

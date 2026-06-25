@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}3D Cube{% endblock %}
 {% block feature_name %}cube{% endblock %}
+{% block main_class %}full{% endblock %}
 
 {% block head %}
 <style>
@@ -214,5 +215,6 @@ resize(); window.addEventListener('resize', resize);
   cube.quaternion.slerp(targetQ, lerpFactor);
   renderer.render(scene, camera);
 })();
+initReplay(onIMU);
 </script>
 {% endblock %}

@@ -71,6 +71,7 @@
 
     /* ── Page wrapper ───────────────────────────── */
     main { padding:40px 28px 80px; max-width:1000px; margin:0 auto; }
+    main.full { padding:0; max-width:none; margin:0; height:calc(100vh - 56px); overflow:hidden; }
 
     /* ── Utilities ──────────────────────────────── */
     .badge {
@@ -97,6 +98,28 @@
     .sf-cube    { background:rgba(107,56,212,0.10); color:var(--c-pitch); border-color:rgba(107,56,212,0.2); }
     .sf-phone3d { background:rgba(130,81,0,0.10);   color:var(--c-roll);  border-color:rgba(130,81,0,0.2);   }
     .sf-drums   { background:rgba(186,26,26,0.10);  color:var(--red);     border-color:rgba(186,26,26,0.2);  }
+
+    /* ── Live Replay bar ──────────────────────────────── */
+    #rp-bar {
+      position:fixed; bottom:0; left:0; right:0; z-index:9998;
+      background:rgba(19,27,46,0.97); backdrop-filter:blur(14px);
+      border-top:1px solid rgba(255,255,255,0.08);
+      padding:12px 20px 14px; display:flex; align-items:center; gap:14px;
+      transform:translateY(100%); transition:transform .3s cubic-bezier(.4,0,.2,1);
+    }
+    #rp-bar.show { transform:translateY(0); }
+    #rp-bar .rp-back { padding:6px 10px !important; color:rgba(255,255,255,.6) !important; border-color:rgba(255,255,255,.12) !important; background:rgba(255,255,255,.05) !important; flex-shrink:0; }
+    #rp-bar .rp-back:hover { color:#fff !important; }
+    .rp-icon { color:var(--accent) !important; font-size:22px !important; flex-shrink:0; }
+    .rp-info { display:flex; align-items:center; gap:10px; }
+    .rp-title { font-size:.8rem; font-weight:700; color:rgba(255,255,255,.9); white-space:nowrap; }
+    .rp-sub   { font-size:.68rem; color:rgba(255,255,255,.4); margin-top:1px; white-space:nowrap; }
+    .rp-progress { flex:1; display:flex; align-items:center; gap:10px; min-width:80px; }
+    .rp-track { flex:1; height:4px; background:rgba(255,255,255,.12); border-radius:2px; overflow:hidden; }
+    .rp-fill  { height:100%; width:0; background:var(--accent); border-radius:2px; transition:width .1s linear; }
+    .rp-time  { font-size:.7rem; color:rgba(255,255,255,.45); font-variant-numeric:tabular-nums; white-space:nowrap; }
+    .rp-speed { background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.12); border-radius:6px; color:rgba(255,255,255,.7); font-size:.72rem; padding:5px 8px; font-family:var(--font); cursor:pointer; flex-shrink:0; }
+    .rp-stop-btn { font-size:.72rem !important; padding:6px 14px !important; white-space:nowrap; flex-shrink:0; }
   </style>
   {% block head %}{% endblock %}
 </head>
@@ -113,9 +136,103 @@
     </div>
   </header>
 
-  <main>{% block content %}{% endblock %}</main>
+  <main class="{% block main_class %}{% endblock %}">{% block content %}{% endblock %}</main>
 
   <script src="{{ url_for('static', filename='chart.min.js') }}"></script>
+  <script src="{{ url_for('static', filename='three.min.js') }}"></script>
+  <!-- socket.io stub so feature templates load without errors on Render -->
+  <script>
+  if (typeof io === 'undefined') {
+    window.io = function() {
+      const noop = () => {};
+      return { on: noop, emit: noop, off: noop };
+    };
+  }
+  </script>
+  <script>
+  /* ── Live Replay engine ──────────────────── */
+  function initReplay(onIMUFn) {
+    const sid = new URLSearchParams(window.location.search).get('replay');
+    if (!sid) return;
+
+    const bar = document.createElement('div');
+    bar.id = 'rp-bar';
+    bar.innerHTML =
+      '<a href="/sessions/' + sid + '" class="rp-back btn btn-ghost"><span class="ms">arrow_back</span></a>' +
+      '<div class="rp-info"><span class="ms fill rp-icon" id="rp-icon">sensors</span>' +
+      '<div><div class="rp-title" id="rp-title">Loading replay…</div>' +
+      '<div class="rp-sub" id="rp-sub"></div></div></div>' +
+      '<div class="rp-progress"><div class="rp-track"><div class="rp-fill" id="rp-fill"></div></div>' +
+      '<span class="rp-time" id="rp-time">0:00 / 0:00</span></div>' +
+      '<select class="rp-speed" id="rp-speed">' +
+        '<option value="0.5">0.5×</option><option value="1" selected>1×</option>' +
+        '<option value="2">2×</option><option value="4">4×</option></select>' +
+      '<button class="rp-stop-btn btn btn-danger" id="rp-stop"><span class="ms">stop</span> Stop</button>';
+    document.body.appendChild(bar);
+    requestAnimationFrame(() => bar.classList.add('show'));
+
+    let stopped = false, speed = 1, timer = null;
+    const fmtMs = ms => { const s = Math.floor(ms/1000); return Math.floor(s/60) + ':' + String(s%60).padStart(2,'0'); };
+
+    document.getElementById('rp-speed').onchange = e => { speed = +e.target.value; };
+    document.getElementById('rp-stop').onclick = () => {
+      stopped = true; clearTimeout(timer);
+      bar.classList.remove('show');
+      setTimeout(() => bar.remove(), 320);
+    };
+
+    fetch('/api/sessions/' + sid)
+      .then(r => r.json())
+      .then(({ session, readings }) => {
+        const ICONS  = { draw:'draw', cube:'view_in_ar', phone3d:'phone_android', drums:'graphic_eq' };
+        const LABELS = { draw:'Air Drawing', cube:'3D Cube', phone3d:'Phone 3D', drums:'Drum Kit' };
+        document.getElementById('rp-icon').textContent  = ICONS[session.feature]  || 'sensors';
+        document.getElementById('rp-title').textContent = LABELS[session.feature] || session.feature;
+        document.getElementById('rp-sub').textContent   = 'Session #' + session.id + ' · ' + readings.length + ' readings';
+
+        if (!readings || readings.length === 0) {
+          document.getElementById('rp-title').textContent = 'No readings in this session';
+          return;
+        }
+
+        const totalMs  = (readings[readings.length - 1].t || 0) - (readings[0].t || 0);
+        const totalStr = fmtMs(totalMs);
+        let idx = 0;
+
+        onIMUFn(readings[0]);
+
+        function step() {
+          if (stopped || idx >= readings.length) {
+            if (!stopped) {
+              document.getElementById('rp-title').textContent = 'Replay complete';
+              document.getElementById('rp-sub').textContent  = '';
+              const btn = document.getElementById('rp-stop');
+              btn.innerHTML = '<span class="ms">close</span> Close';
+              btn.onclick   = () => { bar.classList.remove('show'); setTimeout(() => bar.remove(), 320); };
+            }
+            return;
+          }
+          const r = readings[idx];
+          onIMUFn(r);
+
+          const elapsed = (r.t || 0) - (readings[0].t || 0);
+          document.getElementById('rp-fill').style.width = totalMs > 0 ? (elapsed/totalMs*100).toFixed(1) + '%' : '0%';
+          document.getElementById('rp-time').textContent = fmtMs(elapsed) + ' / ' + totalStr;
+
+          idx++;
+          if (idx < readings.length) {
+            const delay = ((readings[idx].t || 0) - (r.t || 0)) / speed;
+            timer = setTimeout(step, Math.max(8, Math.min(delay, 500)));
+          } else {
+            step();
+          }
+        }
+
+        timer = setTimeout(step, 600);
+      })
+      .catch(() => { document.getElementById('rp-title').textContent = 'Failed to load session data'; });
+  }
+  </script>
   {% block scripts %}{% endblock %}
 </body>
 </html>

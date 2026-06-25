@@ -62,6 +62,11 @@
     </div>
     <div class="sd-actions">
       <a href="/sessions" class="btn btn-ghost"><span class="ms">arrow_back</span> All Sessions</a>
+      {% if data.readings %}
+      <a href="/{{ data.session.feature }}?replay={{ data.session.id }}" class="btn btn-primary">
+        <span class="ms fill">play_circle</span> Live Replay
+      </a>
+      {% endif %}
     </div>
   </div>
 
