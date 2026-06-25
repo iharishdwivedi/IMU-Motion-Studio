@@ -6,7 +6,7 @@ from database import init_db, session_create, session_end, sessions_list, sessio
 
 app = Flask(__name__)
 CORS(app)
-socketio = SocketIO(app, cors_allowed_origins="*")
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='gevent')
 
 init_db()
 
